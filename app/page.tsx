@@ -79,7 +79,12 @@ function Header() {
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#ececec] text-[#121212]">
+    <main className="relative min-h-screen bg-[#ececec] text-[#121212]">
+      {/* Decorative mountain background */}
+      <div
+        className="pointer-events-none absolute bottom-0 left-0 right-0 h-[1000px] bg-bottom bg-no-repeat opacity-70 mix-blend-multiply"
+        style={{ backgroundImage: "url('aetherius/assets/hp-tour-bg-2-n.jpg')", backgroundSize: "100% auto" }}
+      />
       <Header />
 
       <section className="relative min-h-[92vh] overflow-hidden">
@@ -95,40 +100,40 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-amber-400/40 bg-black/30 px-4 py-2 text-sm font-semibold text-amber-300"
           >
-              <Sparkles className="h-4 w-4" />
-              AI-Powered Travel Planning
-            </motion.p>
+            <Sparkles className="h-4 w-4" />
+            AI-Powered Travel Planning
+          </motion.p>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
-              className="max-w-4xl text-5xl font-syne font-bold uppercase leading-[1.05] md:text-7xl"
-            >
-              Explore The New Way To Plan Trips
-            </motion.h1>
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="max-w-4xl text-5xl font-syne font-bold uppercase leading-[1.05] md:text-7xl"
+          >
+            Explore The New Way To Plan Trips
+          </motion.h1>
 
-            <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="mt-6 max-w-3xl text-lg text-white/85 md:text-xl"
-            >
-              Traveloop helps individuals and teams plan smarter trips with a unified workflow across itinerary design, budget planning, checklist preparation, and collaboration.
-            </motion.p>
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mt-6 max-w-3xl text-lg text-white/85 md:text-xl"
+          >
+            Traveloop helps individuals and teams plan smarter trips with a unified workflow across itinerary design, budget planning, checklist preparation, and collaboration.
+          </motion.p>
 
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mt-10 flex flex-wrap gap-3">
-              <Link href="/trips/new" className="inline-flex items-center rounded-xl bg-amber-500 px-6 py-3.5 font-bold text-slate-900 transition-colors hover:bg-amber-400">
-                Start Planning <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-              <Link href="/explore/cities" className="inline-flex items-center rounded-xl border border-white/40 bg-white/10 px-6 py-3.5 font-semibold text-white backdrop-blur-sm transition-colors hover:border-white">
-                Explore Destinations
-              </Link>
-            </motion.div>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mt-10 flex flex-wrap gap-3">
+            <Link href="/trips/new" className="inline-flex items-center rounded-xl bg-amber-500 px-6 py-3.5 font-bold text-slate-900 transition-colors hover:bg-amber-400">
+              Start Planning <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+            <Link href="/explore/cities" className="inline-flex items-center rounded-xl border border-white/40 bg-white/10 px-6 py-3.5 font-semibold text-white backdrop-blur-sm transition-colors hover:border-white">
+              Explore Destinations
+            </Link>
+          </motion.div>
         </div>
       </section>
 
-      <section id="overview" className="mx-auto -mt-14 max-w-[1200px] px-4 md:px-6">
+      <section id="overview" className="relative z-10 mx-auto -mt-14 max-w-[1200px] px-4 md:px-6">
         <div className="rounded-3xl border border-black/10 bg-white p-7 shadow-[0_20px_60px_rgba(0,0,0,0.08)] md:p-9">
           <h2 className="text-3xl font-syne font-bold">Why Teams Choose Traveloop</h2>
           <p className="mt-2 text-[#585858]">Traveloop is built to remove planning friction and provide a professional, end-to-end travel workflow.</p>

@@ -1,38 +1,17 @@
-import connectToDatabase from '@/lib/db/mongoose';
-import Trip from '@/lib/models/Trip';
-import Stop from '@/lib/models/Stop';
+import { prisma } from '@/lib/db/prisma';
 import { notFound } from 'next/navigation';
 import { Calendar, Users, Globe } from 'lucide-react';
 import { ExportButton } from '@/components/trips/ExportButton';
-import { TripVisibility } from '@/types';
 import Image from 'next/image';
+import { TripVisibility } from '@prisma/client';
 
-type SharedTrip = {
-  _id: unknown;
-  name: string;
-  description?: string;
-  coverPhoto?: string;
-  visibility: TripVisibility;
-  userId?: { name?: string } | string;
-  totalBudget?: number;
-  currency?: string;
-};
-
-type SharedStop = {
-  _id: unknown;
-  cityName: string;
-  country: string;
-  nights?: number;
-  notes?: string;
-};
+export const dynamic = 'force-dynamic';
 
 export default async function PublicTripSharePage({ params }: { params: { token: string } }) {
-  await connectToDatabase();
-  
-  const trip = await Trip.findOne({ shareToken: params.token })
-    .populate('userId', 'name')
-    .lean()
-    .exec() as SharedTrip | null;
+  const trip = await prisma.trip.findUnique({
+    where: { shareToken: params.token },
+    include: { user: { select: { name: true } } }
+  });
   
   if (!trip) {
     notFound();
@@ -47,10 +26,10 @@ export default async function PublicTripSharePage({ params }: { params: { token:
     );
   }
 
-  const stops = await Stop.find({ tripId: trip._id })
-    .sort({ order: 1 })
-    .lean()
-    .exec() as unknown as SharedStop[];
+  const stops = await prisma.stop.findMany({
+    where: { tripId: trip.id },
+    orderBy: { order: 'asc' }
+  });
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200">
@@ -88,7 +67,7 @@ export default async function PublicTripSharePage({ params }: { params: { token:
             <Users className="w-6 h-6 text-amber-500 mr-4" />
             <div>
               <div className="text-xs text-slate-500 uppercase">Created By</div>
-              <div className="font-medium text-slate-200">{typeof trip.userId === 'object' ? trip.userId?.name || 'Traveler' : 'Traveler'}</div>
+              <div className="font-medium text-slate-200">{trip.user?.name || 'Traveler'}</div>
             </div>
           </div>
           {trip.totalBudget && (
@@ -103,25 +82,33 @@ export default async function PublicTripSharePage({ params }: { params: { token:
         </div>
 
         <div className="space-y-8 relative before:absolute before:inset-0 before:ml-6 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-amber-500 before:to-slate-800">
-          {stops.map((stop, idx) => (
-            <div key={String(stop._id)} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-[#0f172a] bg-amber-500 text-slate-900 font-bold shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
-                {idx + 1}
+          {stops.map((stop, idx) => {
+            const arrivalDate = stop.arrivalDate ? new Date(stop.arrivalDate) : null;
+            const departureDate = stop.departureDate ? new Date(stop.departureDate) : null;
+            const nights = arrivalDate && departureDate
+              ? Math.ceil(Math.abs(departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24))
+              : 0;
+
+            return (
+              <div key={stop.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-[#0f172a] bg-amber-500 text-slate-900 font-bold shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
+                  {idx + 1}
+                </div>
+                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-3rem)] glass-card p-6 rounded-2xl">
+                  <h3 className="font-syne font-bold text-xl text-amber-500 mb-1 flex items-center">
+                    {stop.cityName}
+                  </h3>
+                  <p className="text-sm text-slate-400 mb-4">{stop.country} • {nights} Nights</p>
+                  
+                  {stop.notes && (
+                    <p className="text-slate-300 text-sm bg-slate-900/50 p-3 rounded-lg border border-slate-800 italic">
+                      &ldquo;{stop.notes}&rdquo;
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="w-[calc(100%-4rem)] md:w-[calc(50%-3rem)] glass-card p-6 rounded-2xl">
-                <h3 className="font-syne font-bold text-xl text-amber-500 mb-1 flex items-center">
-                  {stop.cityName}
-                </h3>
-                <p className="text-sm text-slate-400 mb-4">{stop.country} • {stop.nights} Nights</p>
-                
-                {stop.notes && (
-                  <p className="text-slate-300 text-sm bg-slate-900/50 p-3 rounded-lg border border-slate-800 italic">
-                    &ldquo;{stop.notes}&rdquo;
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </main>
     </div>

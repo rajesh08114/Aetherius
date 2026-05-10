@@ -12,3 +12,5 @@ next-dev*.err.log
 *.tsbuildinfo
 *.make
 extract.py
+.vercel
+.env*.local

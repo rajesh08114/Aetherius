@@ -1,37 +1,39 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import connectToDatabase from '@/lib/db/mongoose';
-import User from '@/lib/models/User';
+import { prisma } from '@/lib/db/prisma';
+import { mapUser } from '@/lib/db/mappers';
 import { RegisterSchema } from '@/lib/validations/auth';
 import { signAccessToken, signRefreshToken } from '@/lib/auth/jwt';
 import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
   try {
-    await connectToDatabase();
-    
     const body = await req.json();
     const validatedData = RegisterSchema.parse(body);
 
-    const existingUser = await User.findOne({ email: validatedData.email });
+    const existingUser = await prisma.user.findUnique({ where: { email: validatedData.email } });
     if (existingUser) {
       return NextResponse.json({ success: false, error: 'Email already in use' }, { status: 400 });
     }
 
     const passwordHash = await bcrypt.hash(validatedData.password, 12);
 
-    const user = await User.create({
+    const user = await prisma.user.create({
+      data: {
       name: validatedData.name,
       email: validatedData.email,
       passwordHash
+      }
     });
 
-    const accessToken = signAccessToken({ userId: user._id.toString(), role: user.role });
-    const refreshToken = signRefreshToken({ userId: user._id.toString() });
+    const accessToken = signAccessToken({ userId: user.id, role: user.role });
+    const refreshToken = signRefreshToken({ userId: user.id });
 
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-    user.refreshTokenHash = refreshTokenHash;
-    await user.save();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshTokenHash }
+    });
 
     cookies().set('refreshToken', refreshToken, {
       httpOnly: true,
@@ -41,11 +43,8 @@ export async function POST(req: Request) {
       maxAge: 7 * 24 * 60 * 60 // 7 days
     });
 
-    const userObj = user.toObject();
-    delete userObj.passwordHash;
-    delete userObj.refreshTokenHash;
-
-    return NextResponse.json({ success: true, data: { user: userObj, accessToken } });
+    const safeUser = await prisma.user.findUnique({ where: { id: user.id } });
+    return NextResponse.json({ success: true, data: { user: mapUser(safeUser), accessToken } });
 
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });

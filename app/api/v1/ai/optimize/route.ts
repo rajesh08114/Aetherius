@@ -4,9 +4,7 @@ import { checkRateLimit } from '@/lib/db/redis';
 import { BUDGET_OPTIMIZER_PROMPT } from '@/lib/ai/prompts';
 import { aiClient } from '@/lib/ai/client';
 import { extractJsonObject } from '@/lib/ai/json';
-import connectToDatabase from '@/lib/db/mongoose';
-import Trip from '@/lib/models/Trip';
-import Stop from '@/lib/models/Stop';
+import { prisma } from '@/lib/db/prisma';
 
 export async function POST(req: Request) {
   try {
@@ -19,22 +17,32 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { tripId } = body;
 
-    await connectToDatabase();
-    const trip = await Trip.findOne({ _id: tripId, userId: auth.userId });
+    const trip = await prisma.trip.findFirst({ where: { id: tripId, userId: auth.userId } });
     if (!trip) return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
 
-    const stops = await Stop.find({ tripId }).populate('activities');
+    const stops = await prisma.stop.findMany({ where: { tripId }, include: { activities: true } });
 
     const tripData = {
       budget: trip.totalBudget,
       currency: trip.currency,
-      stops: stops.map(s => ({
-        city: s.cityName,
-        nights: s.nights,
-        accommodationCost: s.accommodation?.cost,
-        transportCost: s.transportTo?.cost,
-        activities: s.activities.map((a: any) => ({ name: a.name, cost: a.cost }))
-      }))
+      stops: stops.map(s => {
+        const accommodation = s.accommodation as { cost?: number } | null;
+        const transport = s.transportTo as { cost?: number } | null;
+
+        const arrivalDate = s.arrivalDate ? new Date(s.arrivalDate) : null;
+        const departureDate = s.departureDate ? new Date(s.departureDate) : null;
+        const nights = arrivalDate && departureDate
+          ? Math.ceil(Math.abs(departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24))
+          : 0;
+
+        return {
+          city: s.cityName,
+          nights,
+          accommodationCost: accommodation?.cost,
+          transportCost: transport?.cost,
+          activities: s.activities.map(a => ({ name: a.name, cost: a.cost }))
+        };
+      })
     };
 
     if (!aiClient) {

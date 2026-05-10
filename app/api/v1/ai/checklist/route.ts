@@ -4,10 +4,7 @@ import { checkRateLimit } from '@/lib/db/redis';
 import { PACKING_EXPERT_PROMPT } from '@/lib/ai/prompts';
 import { aiClient } from '@/lib/ai/client';
 import { extractJsonObject } from '@/lib/ai/json';
-import connectToDatabase from '@/lib/db/mongoose';
-import Trip from '@/lib/models/Trip';
-import Stop from '@/lib/models/Stop';
-import Checklist from '@/lib/models/Checklist';
+import { prisma } from '@/lib/db/prisma';
 import crypto from 'crypto';
 
 export async function POST(req: Request) {
@@ -21,12 +18,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { tripId } = body;
 
-    await connectToDatabase();
-    const trip = await Trip.findOne({ _id: tripId, userId: auth.userId });
+    const trip = await prisma.trip.findFirst({ where: { id: tripId, userId: auth.userId } });
     if (!trip) return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
 
-    const stops = await Stop.find({ tripId });
-    const tripContext = `Cities: ${stops.map(s => s.cityName).join(', ')}. Month: ${new Date(trip.startDate!).toLocaleString('default', { month: 'long' })}`;
+    const stops = await prisma.stop.findMany({ where: { tripId } });
+    const tripContext = `Cities: ${stops.map(s => s.cityName).join(', ')}. Month: ${trip.startDate ? new Date(trip.startDate).toLocaleString('default', { month: 'long' }) : 'Unknown'}`;
 
     let items = [];
 
@@ -57,14 +53,27 @@ export async function POST(req: Request) {
       addedByAI: true
     }));
 
-    const checklist = await Checklist.findOneAndUpdate(
-      { tripId: trip._id },
-      { $setOnInsert: { userId: auth.userId, items: [] } },
-      { upsert: true, new: true }
-    );
+    let checklist = await prisma.checklist.findUnique({
+      where: { tripId: trip.id }
+    });
 
-    checklist.items.push(...formattedItems);
-    await checklist.save();
+    if (!checklist) {
+      checklist = await prisma.checklist.create({
+        data: {
+          tripId: trip.id,
+          userId: auth.userId,
+          items: []
+        }
+      });
+    }
+
+    const currentItems = Array.isArray(checklist.items) ? checklist.items as any[] : [];
+    const newItems = [...currentItems, ...formattedItems];
+
+    checklist = await prisma.checklist.update({
+      where: { id: checklist.id },
+      data: { items: newItems }
+    });
 
     return NextResponse.json({ success: true, data: checklist.items });
   } catch (error: any) {

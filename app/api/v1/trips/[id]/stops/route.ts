@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth/middleware';
-import connectToDatabase from '@/lib/db/mongoose';
-import Trip from '@/lib/models/Trip';
-import Stop from '@/lib/models/Stop';
+import { prisma } from '@/lib/db/prisma';
+import { mapStop } from '@/lib/db/mappers';
 import { CreateStopSchema } from '@/lib/validations/trip';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -10,10 +9,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const auth = await verifyAuth(req);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    await connectToDatabase();
-    
-    const stops = await Stop.find({ tripId: params.id }).sort({ order: 1 });
-    return NextResponse.json({ success: true, data: stops });
+    const stops = await prisma.stop.findMany({
+      where: { tripId: params.id },
+      orderBy: { order: 'asc' },
+      include: { activities: true }
+    });
+
+    return NextResponse.json({ success: true, data: stops.map(mapStop) });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -27,24 +29,21 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const body = await req.json();
     const data = CreateStopSchema.parse(body);
 
-    await connectToDatabase();
-
-    const trip = await Trip.findOne({ _id: params.id, userId: auth.userId });
+    const trip = await prisma.trip.findFirst({ where: { id: params.id, userId: auth.userId } });
     if (!trip) return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
 
-    const lastStop = await Stop.findOne({ tripId: trip._id }).sort({ order: -1 });
+    const lastStop = await prisma.stop.findFirst({
+      where: { tripId: trip.id },
+      orderBy: { order: 'desc' }
+    });
     const order = lastStop ? lastStop.order + 1 : 1;
 
-    const stop = await Stop.create({
-      ...data,
-      tripId: trip._id,
-      order,
-      activities: []
+    const stop = await prisma.stop.create({
+      data: { ...data, tripId: trip.id, order },
+      include: { activities: true }
     });
 
-    await Trip.findByIdAndUpdate(trip._id, { $push: { stops: stop._id } });
-
-    return NextResponse.json({ success: true, data: stop });
+    return NextResponse.json({ success: true, data: mapStop(stop) });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }

@@ -4,8 +4,7 @@ import { checkRateLimit } from '@/lib/db/redis';
 import { MOOD_MATCHER_PROMPT } from '@/lib/ai/prompts';
 import { aiClient } from '@/lib/ai/client';
 import { extractJsonObject } from '@/lib/ai/json';
-import connectToDatabase from '@/lib/db/mongoose';
-import User from '@/lib/models/User';
+import { prisma } from '@/lib/db/prisma';
 import { buildUserContext } from '@/lib/ai/context-builder';
 
 const fallbackRecommendations = [
@@ -30,9 +29,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, data: { recommendations: fallbackRecommendations } });
     }
 
-    await connectToDatabase();
-    const user = await User.findById(auth.userId);
-    const userContext = user ? buildUserContext(user) : '';
+    const user = await prisma.user.findUnique({ where: { id: auth.userId } });
+    const userContext = user ? buildUserContext(user as any) : ''; // cast needed if buildUserContext uses any or old format
 
     if (!aiClient) {
       return NextResponse.json({

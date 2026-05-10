@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth/middleware';
-import connectToDatabase from '@/lib/db/mongoose';
-import User from '@/lib/models/User';
-import Trip from '@/lib/models/Trip';
-import Stop from '@/lib/models/Stop';
-import Activity from '@/lib/models/Activity';
-import TripLike from '@/lib/models/TripLike';
-import TripComment from '@/lib/models/TripComment';
+import { prisma } from '@/lib/db/prisma';
 
-function buildDailySeries(raw: Array<{ _id: string; count: number }>, days: number) {
-  const byDay = new Map(raw.map((row) => [row._id, row.count]));
+function buildDailySeries(raw: Array<{ date: string; count: number }>, days: number) {
+  const byDay = new Map(raw.map((row) => [row.date, row.count]));
   const data: Array<{ date: string; count: number }> = [];
 
   for (let i = days - 1; i >= 0; i -= 1) {
@@ -18,10 +12,7 @@ function buildDailySeries(raw: Array<{ _id: string; count: number }>, days: numb
     date.setDate(date.getDate() - i);
 
     const key = date.toISOString().slice(0, 10);
-    data.push({
-      date: key,
-      count: byDay.get(key) ?? 0
-    });
+    data.push({ date: key, count: byDay.get(key) ?? 0 });
   }
 
   return data;
@@ -37,177 +28,129 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    await connectToDatabase();
-
     const trendDays = 30;
     const since = new Date();
     since.setHours(0, 0, 0, 0);
     since.setDate(since.getDate() - (trendDays - 1));
 
+    // Run all independent queries in parallel
     const [
       totalUsers,
       totalTrips,
       totalActivities,
+      totalStops,
       totalLikes,
       totalComments,
-      tripsByStatusRaw,
-      tripsTrendRaw,
-      usersTrendRaw,
-      topCities,
-      topActivities,
+      activeUsers30,
+      tripsByStatus,
       viewAgg,
       recentTrips,
       recentUsers,
-      activeUsers30
+      topActivityTypes,
     ] = await Promise.all([
-      User.countDocuments({}),
-      Trip.countDocuments({}),
-      Activity.countDocuments({}),
-      TripLike.countDocuments({}),
-      TripComment.countDocuments({}),
-      Trip.aggregate([
-        { $group: { _id: '$status', count: { $sum: 1 } } },
-        { $project: { _id: 0, status: '$_id', count: 1 } }
-      ]),
-      Trip.aggregate([
-        { $match: { createdAt: { $gte: since } } },
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-            count: { $sum: 1 }
-          }
-        },
-        { $sort: { _id: 1 } }
-      ]),
-      User.aggregate([
-        { $match: { createdAt: { $gte: since } } },
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-            count: { $sum: 1 }
-          }
-        },
-        { $sort: { _id: 1 } }
-      ]),
-      Stop.aggregate([
-        {
-          $group: {
-            _id: {
-              cityName: { $ifNull: ['$cityName', 'Unknown City'] },
-              country: { $ifNull: ['$country', 'Unknown'] }
-            },
-            stopsCount: { $sum: 1 },
-            tripIds: { $addToSet: '$tripId' }
-          }
-        },
-        {
-          $project: {
-            _id: 0,
-            cityName: '$_id.cityName',
-            country: '$_id.country',
-            stopsCount: 1,
-            tripsCount: { $size: '$tripIds' }
-          }
-        },
-        { $sort: { tripsCount: -1, stopsCount: -1 } },
-        { $limit: 8 }
-      ]),
-      Activity.aggregate([
-        {
-          $group: {
-            _id: '$type',
-            count: { $sum: 1 },
-            avgCost: { $avg: '$cost' }
-          }
-        },
-        {
-          $project: {
-            _id: 0,
-            type: '$_id',
-            count: 1,
-            avgCost: { $round: ['$avgCost', 2] }
-          }
-        },
-        { $sort: { count: -1 } }
-      ]),
-      Trip.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalViews: { $sum: '$viewCount' },
-            avgViewsPerTrip: { $avg: '$viewCount' },
-            totalForks: { $sum: '$forkCount' }
-          }
+      prisma.user.count(),
+      prisma.trip.count(),
+      prisma.activity.count(),
+      prisma.stop.count(),
+      prisma.tripLike.count(),
+      prisma.tripComment.count(),
+      prisma.user.count({ where: { updatedAt: { gte: since } } }),
+      prisma.trip.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.trip.aggregate({ _sum: { viewCount: true, forkCount: true }, _avg: { viewCount: true } }),
+      prisma.trip.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: {
+          id: true, name: true, status: true, visibility: true, createdAt: true,
+          updatedAt: true, likesCount: true, viewCount: true, forkCount: true,
+          totalBudget: true, currency: true, user: { select: { name: true, email: true } }
         }
-      ]),
-      Trip.find({})
-        .sort({ createdAt: -1 })
-        .limit(10)
-        .populate('userId', 'name email')
-        .select('name status visibility createdAt updatedAt likesCount viewCount forkCount totalBudget currency userId')
-        .lean(),
-      User.find({})
-        .sort({ createdAt: -1 })
-        .limit(25)
-        .select('name email role createdAt updatedAt followersCount followingCount')
-        .lean(),
-      User.countDocuments({ updatedAt: { $gte: since } })
+      }),
+      prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 25,
+        select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true, followersCount: true, followingCount: true }
+      }),
+      prisma.activity.groupBy({
+        by: ['type'],
+        _count: { _all: true },
+        _avg: { cost: true }
+      }),
     ]);
 
-    const userIds = recentUsers.map((u: any) => u._id);
+    // Date-bucketed trend queries (requires raw SQL for date truncation)
+    type DayRow = { date: string; count: bigint };
+    const [tripsTrendRaw, usersTrendRaw, topCitiesRaw] = await Promise.all([
+      prisma.$queryRaw<DayRow[]>`
+        SELECT TO_CHAR("createdAt", 'YYYY-MM-DD') AS date, COUNT(*)::int AS count
+        FROM "Trip"
+        WHERE "createdAt" >= ${since}
+        GROUP BY date ORDER BY date ASC`,
+      prisma.$queryRaw<DayRow[]>`
+        SELECT TO_CHAR("createdAt", 'YYYY-MM-DD') AS date, COUNT(*)::int AS count
+        FROM "User"
+        WHERE "createdAt" >= ${since}
+        GROUP BY date ORDER BY date ASC`,
+      prisma.$queryRaw<{ cityName: string; country: string; stopsCount: number; tripsCount: number }[]>`
+        SELECT "cityName", country,
+               COUNT(*)::int AS "stopsCount",
+               COUNT(DISTINCT "tripId")::int AS "tripsCount"
+        FROM "Stop"
+        GROUP BY "cityName", country
+        ORDER BY "tripsCount" DESC, "stopsCount" DESC
+        LIMIT 8`,
+    ]);
+
+    // Trip counts per user for recent users table
+    const userIds = recentUsers.map((u: { id: any; }) => u.id);
     const tripCountsRaw = userIds.length
-      ? await Trip.aggregate([
-          { $match: { userId: { $in: userIds } } },
-          { $group: { _id: '$userId', count: { $sum: 1 } } }
-        ])
+      ? await prisma.trip.groupBy({ by: ['userId'], where: { userId: { in: userIds } }, _count: { _all: true } })
       : [];
+    const tripCountsByUser = new Map(tripCountsRaw.map((r: { userId: any; _count: { _all: any; }; }) => [r.userId, r._count._all]));
 
-    const tripCountsByUser = new Map(tripCountsRaw.map((row: any) => [String(row._id), row.count]));
-
-    const users = recentUsers.map((u: any) => ({
-      _id: String(u._id),
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      createdAt: u.createdAt,
-      updatedAt: u.updatedAt,
-      followersCount: u.followersCount ?? 0,
-      followingCount: u.followingCount ?? 0,
-      tripsCount: tripCountsByUser.get(String(u._id)) ?? 0
-    }));
-
-    const viewSummary = viewAgg[0] || { totalViews: 0, avgViewsPerTrip: 0, totalForks: 0 };
-    const tripStatusDistribution = [
-      { status: 'planning', count: 0 },
-      { status: 'ongoing', count: 0 },
-      { status: 'completed', count: 0 }
-    ].map((base) => {
-      const found = tripsByStatusRaw.find((item: any) => item.status === base.status);
-      return { ...base, count: found?.count ?? 0 };
+    // Shape response
+    const tripStatusDistribution = ['planning', 'ongoing', 'completed'].map(status => {
+      const found = tripsByStatus.find((r: { status: string; }) => r.status === status);
+      return { status, count: found?._count._all ?? 0 };
     });
+
+    const tripCreationTrend = buildDailySeries(
+      tripsTrendRaw.map((r: { date: any; count: any; }) => ({ date: r.date, count: Number(r.count) })),
+      trendDays
+    );
+    const userGrowthTrend = buildDailySeries(
+      usersTrendRaw.map((r: { date: any; count: any; }) => ({ date: r.date, count: Number(r.count) })),
+      trendDays
+    );
+
+    const topActivities = topActivityTypes.map((r: { type: any; _count: { _all: any; }; _avg: { cost: any; }; }) => ({
+      type: r.type,
+      count: r._count._all,
+      avgCost: Math.round((r._avg.cost ?? 0) * 100) / 100
+    }));
 
     const data = {
       overview: {
         totalUsers,
         totalTrips,
         totalActivities,
-        totalStops: await Stop.countDocuments({}),
+        totalStops,
         activeUsers30,
         engagement: {
           totalLikes,
           totalComments,
-          totalViews: viewSummary.totalViews ?? 0,
-          totalForks: viewSummary.totalForks ?? 0,
-          avgViewsPerTrip: Number((viewSummary.avgViewsPerTrip ?? 0).toFixed(2))
+          totalViews: viewAgg._sum.viewCount ?? 0,
+          totalForks: viewAgg._sum.forkCount ?? 0,
+          avgViewsPerTrip: Number((viewAgg._avg.viewCount ?? 0).toFixed(2))
         }
       },
       tripStatusDistribution,
-      tripCreationTrend: buildDailySeries(tripsTrendRaw as Array<{ _id: string; count: number }>, trendDays),
-      userGrowthTrend: buildDailySeries(usersTrendRaw as Array<{ _id: string; count: number }>, trendDays),
-      topCities,
+      tripCreationTrend,
+      userGrowthTrend,
+      topCities: topCitiesRaw,
       topActivities,
-      recentTrips: recentTrips.map((trip: any) => ({
-        _id: String(trip._id),
+      recentTrips: recentTrips.map((trip: { id: any; name: any; status: any; visibility: any; createdAt: any; updatedAt: any; likesCount: any; viewCount: any; forkCount: any; totalBudget: any; currency: any; user: { name: any; email: any; }; }) => ({
+        _id: trip.id,
         name: trip.name,
         status: trip.status,
         visibility: trip.visibility,
@@ -218,10 +161,20 @@ export async function GET(req: Request) {
         forkCount: trip.forkCount ?? 0,
         totalBudget: trip.totalBudget ?? null,
         currency: trip.currency ?? 'USD',
-        ownerName: trip.userId?.name ?? 'Unknown',
-        ownerEmail: trip.userId?.email ?? ''
+        ownerName: trip.user?.name ?? 'Unknown',
+        ownerEmail: trip.user?.email ?? ''
       })),
-      users
+      users: recentUsers.map((u: { id: unknown; name: any; email: any; role: any; createdAt: any; updatedAt: any; followersCount: any; followingCount: any; }) => ({
+        _id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+        followersCount: u.followersCount ?? 0,
+        followingCount: u.followingCount ?? 0,
+        tripsCount: tripCountsByUser.get(u.id) ?? 0
+      }))
     };
 
     return NextResponse.json({ success: true, data });

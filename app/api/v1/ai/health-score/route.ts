@@ -4,9 +4,7 @@ import { checkRateLimit } from '@/lib/db/redis';
 import { ITINERARY_HEALTH_PROMPT, CONFLICT_DETECTOR_PROMPT } from '@/lib/ai/prompts';
 import { aiClient } from '@/lib/ai/client';
 import { extractJsonObject } from '@/lib/ai/json';
-import connectToDatabase from '@/lib/db/mongoose';
-import Trip from '@/lib/models/Trip';
-import Stop from '@/lib/models/Stop';
+import { prisma } from '@/lib/db/prisma';
 
 export async function POST(req: Request) {
   try {
@@ -19,11 +17,10 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { tripId } = body;
 
-    await connectToDatabase();
-    const trip = await Trip.findOne({ _id: tripId, userId: auth.userId });
+    const trip = await prisma.trip.findFirst({ where: { id: tripId, userId: auth.userId } });
     if (!trip) return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
 
-    const stops = await Stop.find({ tripId }).sort({ order: 1 });
+    const stops = await prisma.stop.findMany({ where: { tripId }, orderBy: { order: 'asc' } });
     const itinerary = stops.map(s => `${s.cityName} (Arrival: ${s.arrivalDate}, Departure: ${s.departureDate})`).join(' -> ');
 
     if (!aiClient) {
@@ -35,7 +32,7 @@ export async function POST(req: Request) {
         conflicts: [],
         isClean: true
       };
-      await Trip.findByIdAndUpdate(trip._id, { aiHealthScore: mockResult.score });
+      await prisma.trip.update({ where: { id: trip.id }, data: { aiHealthScore: mockResult.score } });
       return NextResponse.json({ success: true, data: mockResult });
     }
 
@@ -62,7 +59,7 @@ export async function POST(req: Request) {
     const conflicts = getJson(msgConflict);
 
     const result = { ...health, ...conflicts };
-    await Trip.findByIdAndUpdate(trip._id, { aiHealthScore: result.score || 0 });
+    await prisma.trip.update({ where: { id: trip.id }, data: { aiHealthScore: result.score || 0 } });
 
     return NextResponse.json({ success: true, data: result });
   } catch (error: any) {

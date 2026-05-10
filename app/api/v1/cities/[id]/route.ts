@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db/mongoose';
-import City from '@/lib/models/City';
+import { prisma } from '@/lib/db/prisma';
+import { mapCity } from '@/lib/db/mappers';
 import { getCache, setCache } from '@/lib/db/redis';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -9,13 +9,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const cached = await getCache(cacheKey);
     if (cached) return NextResponse.json({ success: true, data: cached, cached: true });
 
-    await connectToDatabase();
-    const city = await City.findById(params.id).lean();
+    const city = await prisma.city.findUnique({ where: { id: params.id } });
     if (!city) return NextResponse.json({ error: 'City not found' }, { status: 404 });
 
-    await setCache(cacheKey, city, 3600 * 24); // 24h
+    const mapped = mapCity(city);
+    await setCache(cacheKey, mapped, 3600 * 24); // 24h
 
-    return NextResponse.json({ success: true, data: city });
+    return NextResponse.json({ success: true, data: mapped });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

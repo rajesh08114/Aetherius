@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth/middleware';
-import connectToDatabase from '@/lib/db/mongoose';
-import Trip from '@/lib/models/Trip';
+import { prisma } from '@/lib/db/prisma';
+import { fromDbVisibility, mapTrip, toDbVisibility } from '@/lib/db/mappers';
 import { CreateTripSchema } from '@/lib/validations/trip';
 import crypto from 'crypto';
 
@@ -16,26 +16,41 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '12');
 
-    await connectToDatabase();
+    const where: any = { userId: auth.userId };
+    if (status && status !== 'all') where.status = status;
 
-    const query: any = { userId: auth.userId };
-    if (status && status !== 'all') query.status = status;
-
-    const sortConfig: any = {};
-    if (sort === 'createdAt') sortConfig.createdAt = -1;
-    else if (sort === 'startDate') sortConfig.startDate = 1;
-    else if (sort === 'budget') sortConfig.totalBudget = -1;
+    const orderBy: any =
+      sort === 'startDate'
+        ? { startDate: 'asc' }
+        : sort === 'budget'
+          ? { totalBudget: 'desc' }
+          : { createdAt: 'desc' };
 
     const skip = (page - 1) * limit;
 
     const [trips, total] = await Promise.all([
-      Trip.find(query).sort(sortConfig).skip(skip).limit(limit).lean(),
-      Trip.countDocuments(query)
+      prisma.trip.findMany({
+        where,
+        orderBy,
+        skip,
+        take: limit,
+        include: {
+          stops: {
+            select: { id: true }
+          }
+        }
+      }),
+      prisma.trip.count({ where })
     ]);
+
+    const mappedTrips = trips.map((trip: any) => ({
+      ...mapTrip(trip),
+      stops: trip.stops.map((s: any) => ({ _id: s.id }))
+    }));
 
     return NextResponse.json({
       success: true,
-      data: trips,
+      data: mappedTrips,
       pagination: {
         page, limit, total, totalPages: Math.ceil(total / limit)
       }
@@ -53,19 +68,27 @@ export async function POST(req: Request) {
     const body = await req.json();
     const data = CreateTripSchema.parse(body);
 
-    await connectToDatabase();
-
     const shareToken = crypto.randomBytes(32).toString('hex');
 
-    const trip = await Trip.create({
-      ...data,
-      userId: auth.userId,
-      shareToken,
-      stops: [],
-      collaborators: []
+    const trip = await prisma.trip.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        coverPhoto: data.coverPhoto,
+        startDate: data.startDate ? new Date(data.startDate) : null,
+        endDate: data.endDate ? new Date(data.endDate) : null,
+        totalBudget: data.totalBudget ?? null,
+        currency: data.currency ?? 'USD',
+        visibility: toDbVisibility(data.visibility) || 'private',
+        userId: auth.userId,
+        shareToken
+      },
+      include: {
+        stops: true
+      }
     });
 
-    return NextResponse.json({ success: true, data: trip });
+    return NextResponse.json({ success: true, data: mapTrip({ ...trip, visibility: fromDbVisibility(trip.visibility) }) });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }

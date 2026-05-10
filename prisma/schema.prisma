@@ -57,6 +57,7 @@ model User {
   role               UserRole @default(user)
   languagePreference String   @default("en")
   refreshTokenHash   String?
+  savedDestinations  String[] @default([])
   moodPreferences    String[] @default([])
   travelPersonality  String?
   carbonScore        Float    @default(0)
@@ -74,6 +75,7 @@ model User {
   likes            TripLike[]
   comments         TripComment[]
   collaborations   TripCollaborator[]
+  notes            Note[]
 }
 
 model Trip {
@@ -106,6 +108,7 @@ model Trip {
   likes         TripLike[]
   comments      TripComment[]
   collaborators TripCollaborator[]
+  notes         Note[]
 
   @@index([userId, createdAt(sort: Desc)])
 }
@@ -144,6 +147,7 @@ model Stop {
   trip       Trip       @relation(fields: [tripId], references: [id], onDelete: Cascade)
   city       City?      @relation(fields: [cityId], references: [id])
   activities Activity[]
+  linkedNotes Note[]
 
   @@index([tripId, order])
 }
@@ -205,6 +209,25 @@ model Checklist {
 
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  tripId    String
+  stopId    String?
+  userId    String
+  title     String
+  content   String?
+  date      DateTime @default(now())
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trip Trip  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  stop Stop? @relation(fields: [stopId], references: [id], onDelete: SetNull)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, pinned, date(sort: Desc)])
 }
 
 model Follow {

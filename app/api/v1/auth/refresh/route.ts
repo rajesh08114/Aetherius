@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyRefreshToken, signAccessToken } from '@/lib/auth/jwt';
-import connectToDatabase from '@/lib/db/mongoose';
-import User from '@/lib/models/User';
+import { prisma } from '@/lib/db/prisma';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 
@@ -13,9 +12,7 @@ export async function POST(req: Request) {
     }
 
     const payload = verifyRefreshToken(refreshToken);
-    await connectToDatabase();
-
-    const user = await User.findById(payload.userId).select('+refreshTokenHash');
+    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
     if (!user || !user.refreshTokenHash) {
       return NextResponse.json({ success: false, error: 'Invalid user or token' }, { status: 401 });
     }
@@ -25,7 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
     }
 
-    const accessToken = signAccessToken({ userId: user._id.toString(), role: user.role });
+    const accessToken = signAccessToken({ userId: user.id, role: user.role });
 
     return NextResponse.json({ success: true, data: { accessToken } });
 

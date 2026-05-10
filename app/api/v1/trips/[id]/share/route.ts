@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth/middleware';
-import connectToDatabase from '@/lib/db/mongoose';
-import Trip from '@/lib/models/Trip';
+import { prisma } from '@/lib/db/prisma';
+import { toDbVisibility, fromDbVisibility } from '@/lib/db/mappers';
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -15,19 +15,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: 'Invalid visibility' }, { status: 400 });
     }
 
-    await connectToDatabase();
-    
-    const trip = await Trip.findOneAndUpdate(
-      { _id: params.id, userId: auth.userId },
-      { $set: { visibility } },
-      { new: true }
-    );
+    const dbVisibility = toDbVisibility(visibility);
+    if (!dbVisibility) return NextResponse.json({ error: 'Invalid visibility' }, { status: 400 });
 
-    if (!trip) return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+    const existing = await prisma.trip.findFirst({ where: { id: params.id, userId: auth.userId } });
+    if (!existing) return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+
+    const trip = await prisma.trip.update({
+      where: { id: params.id },
+      data: { visibility: dbVisibility }
+    });
 
     const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/share/${trip.shareToken}`;
 
-    return NextResponse.json({ success: true, data: { shareUrl, visibility: trip.visibility } });
+    return NextResponse.json({ success: true, data: { shareUrl, visibility: fromDbVisibility(trip.visibility) } });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }

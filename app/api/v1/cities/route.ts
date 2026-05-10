@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db/mongoose';
-import City from '@/lib/models/City';
+import { prisma } from '@/lib/db/prisma';
+import { mapCity } from '@/lib/db/mappers';
 import { getCache, setCache } from '@/lib/db/redis';
 
 export async function GET(req: Request) {
@@ -14,24 +14,20 @@ export async function GET(req: Request) {
     const cached = await getCache(cacheKey);
     if (cached) return NextResponse.json({ success: true, data: cached, cached: true });
 
-    await connectToDatabase();
+    const where: any = {};
+    if (query) where.name = { contains: query, mode: 'insensitive' };
+    if (region) where.region = region;
 
-    const dbQuery: any = {};
-    if (query) dbQuery.name = { $regex: query, $options: 'i' };
-    if (region) dbQuery.region = region;
+    const cities = await prisma.city.findMany({
+      where,
+      orderBy: popularity === 'true' ? { popularity: 'desc' } : undefined,
+      take: popularity === 'true' ? 20 : 10,
+    });
 
-    let citiesQuery = City.find(dbQuery);
-    if (popularity === 'true') {
-      citiesQuery = citiesQuery.sort({ popularity: -1 }).limit(20);
-    } else {
-      citiesQuery = citiesQuery.limit(10);
-    }
+    const mapped = cities.map(mapCity);
+    await setCache(cacheKey, mapped, 3600 * 24); // 24h
 
-    const cities = await citiesQuery.lean();
-
-    await setCache(cacheKey, cities, 3600 * 24); // 24h
-
-    return NextResponse.json({ success: true, data: cities });
+    return NextResponse.json({ success: true, data: mapped });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

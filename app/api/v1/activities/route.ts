@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth/middleware';
-import connectToDatabase from '@/lib/db/mongoose';
-import Activity from '@/lib/models/Activity';
+import { prisma } from '@/lib/db/prisma';
+import { mapActivity } from '@/lib/db/mappers';
 import { CreateActivitySchema } from '@/lib/validations/trip';
 
 export async function GET(req: Request) {
@@ -15,28 +15,24 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
 
-    await connectToDatabase();
-
-    const query: any = {};
-    if (stopId) query.stopId = stopId;
-    if (type) query.type = type;
-    if (q) query.name = { $regex: q, $options: 'i' };
-    if (maxCost) query.cost = { ...(query.cost || {}), $lte: Number(maxCost) };
-    if (maxDuration) query.duration = { ...(query.duration || {}), $lte: Number(maxDuration) };
+    const where: any = {};
+    if (stopId) where.stopId = stopId;
+    if (type) where.type = type;
+    if (q) where.name = { contains: q, mode: 'insensitive' };
+    if (maxCost) where.cost = { lte: Number(maxCost) };
+    if (maxDuration) where.duration = { lte: Number(maxDuration) };
 
     const skip = (page - 1) * limit;
 
     const [activities, total] = await Promise.all([
-      Activity.find(query).skip(skip).limit(limit).lean(),
-      Activity.countDocuments(query)
+      prisma.activity.findMany({ where, skip, take: limit }),
+      prisma.activity.count({ where })
     ]);
 
     return NextResponse.json({
       success: true,
-      data: activities,
-      pagination: {
-        page, limit, total, totalPages: Math.ceil(total / limit)
-      }
+      data: activities.map(mapActivity),
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -53,15 +49,11 @@ export async function POST(req: Request) {
     const stopId = body.stopId;
     const tripId = body.tripId;
 
-    await connectToDatabase();
-
-    const activity = await Activity.create({
-      ...data,
-      stopId,
-      tripId
+    const activity = await prisma.activity.create({
+      data: { ...data, stopId, tripId }
     });
 
-    return NextResponse.json({ success: true, data: activity });
+    return NextResponse.json({ success: true, data: mapActivity(activity) });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }
