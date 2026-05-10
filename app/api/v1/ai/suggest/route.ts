@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth/middleware';
 import { checkRateLimit } from '@/lib/db/redis';
 import { TRIP_PLANNER_PROMPT } from '@/lib/ai/prompts';
-import { anthropic } from '@/lib/ai/client';
+import { aiClient } from '@/lib/ai/client';
 
 export async function POST(req: Request) {
   try {
@@ -20,11 +20,11 @@ export async function POST(req: Request) {
       contextString = `\nContext:\n${JSON.stringify(tripContext)}\n`;
     }
 
-    if (!anthropic) {
+    if (!aiClient) {
       // Mock streaming response if no API key
       const stream = new ReadableStream({
         async start(controller) {
-          const text = "I am a mock AI response since the Anthropic API key is not configured.";
+          const text = "I am a mock AI response since the AI provider is not configured.";
           const words = text.split(" ");
           for (const word of words) {
             controller.enqueue(`data: ${JSON.stringify({ text: word + " " })}\n\n`);
@@ -36,8 +36,7 @@ export async function POST(req: Request) {
       return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
     }
 
-    const stream = await anthropic.messages.create({
-      model: 'claude-3-sonnet-20240229',
+    const stream = await aiClient.messages.create({
       max_tokens: 1024,
       system: TRIP_PLANNER_PROMPT,
       messages: [{ role: 'user', content: `${contextString}\nUser: ${prompt}` }],

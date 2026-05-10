@@ -3,3 +3,12 @@ node_modules/
 dist/
 build/
 .env
+.env.*
+!.env.local.example
+*.log
+*.err.log
+next-dev*.log
+next-dev*.err.log
+*.tsbuildinfo
+*.make
+extract.py

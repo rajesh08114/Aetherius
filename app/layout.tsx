@@ -25,7 +25,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'TravelLoop | Camper',
+  title: 'TravelLoop | Aetherius',
   description: 'AI-Powered Travel Planning Application',
 };
 
@@ -42,7 +42,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${josefin.variable} ${syne.variable} ${dmSans.variable}`}>
-      <body className="min-h-screen bg-white font-josefin text-camper-heading antialiased selection:bg-camper-gold/30">
+      <body className="min-h-screen bg-white font-josefin text-aetherius-heading antialiased selection:bg-aetherius-gold/30">
         <Providers>
           <Toaster position="bottom-right" richColors />
           {children}

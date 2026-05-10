@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth/middleware';
 import { checkRateLimit } from '@/lib/db/redis';
 import { BUDGET_OPTIMIZER_PROMPT } from '@/lib/ai/prompts';
-import { anthropic } from '@/lib/ai/client';
+import { aiClient } from '@/lib/ai/client';
 import connectToDatabase from '@/lib/db/mongoose';
 import Trip from '@/lib/models/Trip';
 import Stop from '@/lib/models/Stop';
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       }))
     };
 
-    if (!anthropic) {
+    if (!aiClient) {
       return NextResponse.json({
         success: true,
         data: {
@@ -47,8 +47,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const msg = await anthropic.messages.create({
-      model: 'claude-3-sonnet-20240229',
+    const msg = await aiClient.messages.create({
       max_tokens: 1024,
       system: BUDGET_OPTIMIZER_PROMPT,
       messages: [{ role: 'user', content: JSON.stringify(tripData) }]

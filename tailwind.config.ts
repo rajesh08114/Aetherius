@@ -11,7 +11,7 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        camper: {
+        aetherius: {
           nav: '#1c1c1c',
           charcoal: '#2b2b2b',
           footer: '#181818',

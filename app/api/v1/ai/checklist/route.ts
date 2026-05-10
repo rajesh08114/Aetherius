@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth/middleware';
 import { checkRateLimit } from '@/lib/db/redis';
 import { PACKING_EXPERT_PROMPT } from '@/lib/ai/prompts';
-import { anthropic } from '@/lib/ai/client';
+import { aiClient } from '@/lib/ai/client';
 import connectToDatabase from '@/lib/db/mongoose';
 import Trip from '@/lib/models/Trip';
 import Stop from '@/lib/models/Stop';
@@ -29,14 +29,13 @@ export async function POST(req: Request) {
 
     let items = [];
 
-    if (!anthropic) {
+    if (!aiClient) {
       items = [
         { label: "Passport", category: "documents", quantity: 1, essential: true, weatherReason: "" },
         { label: "Umbrella", category: "misc", quantity: 1, essential: false, weatherReason: "Expected rain in London" }
       ];
     } else {
-      const msg = await anthropic.messages.create({
-        model: 'claude-3-sonnet-20240229',
+      const msg = await aiClient.messages.create({
         max_tokens: 1024,
         system: PACKING_EXPERT_PROMPT,
         messages: [{ role: 'user', content: tripContext }]

@@ -16,8 +16,9 @@ import {
   ShieldCheck,
   Star,
 } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
 
-const A = '/camper/assets';
+const A = '/aetherius/assets';
 
 const navItems = ['Home', 'Pages', 'Tour List', 'Tour Search', 'Blog'];
 
@@ -173,33 +174,44 @@ function FadeIn({ children, className = '' }: { children: React.ReactNode; class
 }
 
 function Header() {
+  const { isAuthenticated } = useAuthStore();
+
   return (
-    <header className="sticky top-0 z-50 h-[96px] bg-camper-nav text-white shadow-[0_1px_0_rgba(255,255,255,0.05)]">
+    <header className="sticky top-0 z-50 h-[96px] bg-aetherius-nav text-white shadow-[0_1px_0_rgba(255,255,255,0.05)]">
       <div className="grid h-full grid-cols-[190px_1fr_auto_auto] max-lg:grid-cols-[170px_1fr_auto]">
-        <Link href="/" className="flex items-center justify-center bg-black px-6" aria-label="Camper home">
-          <Image src={`${A}/logo-camper.png`} alt="Camper" width={112} height={72} priority className="h-auto w-[106px]" />
+        <Link href="/" className="flex items-center justify-center bg-black px-6" aria-label="Aetherius home">
+          <Image src={`${A}/logo-aetherius.png`} alt="Aetherius" width={112} height={72} priority className="h-auto w-[106px]" />
         </Link>
         <nav className="hidden items-center justify-center gap-[50px] text-[20px] font-bold leading-none lg:flex">
           {navItems.map((item) => (
             <Link key={item} href={item === 'Home' ? '/' : '/trips'} className="group relative py-9 hover:text-white">
               {item}
-              <span className="absolute bottom-[18px] left-0 h-[3px] w-0 bg-camper-gold transition-all group-hover:w-7" />
-              {item === 'Home' && <span className="absolute bottom-[18px] left-0 h-[3px] w-7 bg-camper-gold" />}
+              <span className="absolute bottom-[18px] left-0 h-[3px] w-0 bg-aetherius-gold transition-all group-hover:w-7" />
+              {item === 'Home' && <span className="absolute bottom-[18px] left-0 h-[3px] w-7 bg-aetherius-gold" />}
             </Link>
           ))}
         </nav>
         <button
-          className="hidden min-w-[146px] items-center justify-center gap-2 bg-camper-charcoal px-9 text-[15px] font-bold uppercase tracking-[0.28em] lg:flex"
+          className="hidden min-w-[146px] items-center justify-center gap-2 bg-aetherius-charcoal px-9 text-[15px] font-bold uppercase tracking-[0.28em] lg:flex"
           aria-label="Select currency"
         >
           USD <ChevronDown className="h-4 w-4" />
         </button>
-        <Link
-          href="/login"
-          className="hidden min-w-[124px] items-center justify-center bg-camper-gold px-9 text-[19px] font-semibold text-black transition-colors hover:bg-camper-gold-2 sm:flex"
-        >
-          Login
-        </Link>
+        {isAuthenticated ? (
+          <Link
+            href="/trips"
+            className="hidden min-w-[160px] items-center justify-center bg-aetherius-gold px-9 text-[19px] font-semibold text-black transition-colors hover:bg-aetherius-gold-2 sm:flex"
+          >
+            Dashboard
+          </Link>
+        ) : (
+          <Link
+            href="/login"
+            className="hidden min-w-[124px] items-center justify-center bg-aetherius-gold px-9 text-[19px] font-semibold text-black transition-colors hover:bg-aetherius-gold-2 sm:flex"
+          >
+            Login
+          </Link>
+        )}
         <button className="mr-5 place-self-center text-white lg:hidden" aria-label="Open menu">
           <Menu className="h-8 w-8" />
         </button>
@@ -213,7 +225,7 @@ function SectionTitle({ title, action }: { title: string; action?: string }) {
     <div className="mx-auto mb-[44px] flex max-w-[1536px] items-center justify-between px-[20px] md:px-[80px] xl:px-[182px]">
       <h2 className="text-[34px] font-semibold leading-tight text-black">{title}</h2>
       {action && (
-        <Link href="/trips" className="text-[19px] font-normal text-camper-gold hover:text-black">
+        <Link href="/trips" className="text-[19px] font-normal text-aetherius-gold hover:text-black">
           {action}
         </Link>
       )}
@@ -226,7 +238,7 @@ function SearchBar() {
     <section className="relative z-30 -mt-[50px] px-5">
       <form
         action="/explore/cities"
-        className="mx-auto grid max-w-[1536px] overflow-hidden rounded-[20px] bg-camper-field shadow-[0_20px_35px_rgba(20,20,20,0.08)] md:grid-cols-[1fr_1fr_1fr_205px]"
+        className="mx-auto grid max-w-[1536px] overflow-hidden rounded-[20px] bg-aetherius-field shadow-[0_20px_35px_rgba(20,20,20,0.08)] md:grid-cols-[1fr_1fr_1fr_205px]"
         aria-label="Search tours"
       >
         {[
@@ -236,7 +248,7 @@ function SearchBar() {
         ].map(([label, value, dropdown]) => (
           <label key={label as string} className="block px-[38px] py-[36px] text-[21px] font-semibold text-black">
             {label}
-            <span className="mt-[19px] flex items-center justify-between text-[19px] font-normal text-camper-muted">
+            <span className="mt-[19px] flex items-center justify-between text-[19px] font-normal text-aetherius-muted">
               <span>{value}</span>
               {dropdown && <ChevronDown className="h-5 w-5 text-black" />}
             </span>
@@ -244,7 +256,7 @@ function SearchBar() {
         ))}
         <button
           type="submit"
-          className="flex min-h-[148px] flex-col items-center justify-center gap-[16px] bg-camper-gold text-[19px] font-semibold text-black transition-colors hover:bg-camper-gold-2"
+          className="flex min-h-[148px] flex-col items-center justify-center gap-[16px] bg-aetherius-gold text-[19px] font-semibold text-black transition-colors hover:bg-aetherius-gold-2"
         >
           <Search className="h-8 w-8" strokeWidth={3} />
           Search Now
@@ -260,7 +272,7 @@ function Rating({ reviews }: { reviews: string }) {
       {Array.from({ length: 5 }).map((_, i) => (
         <Star key={i} className="h-[17px] w-[17px] fill-current" strokeWidth={0} />
       ))}
-      <span className="ml-2 text-[18px] font-semibold text-camper-muted">({reviews})</span>
+      <span className="ml-2 text-[18px] font-semibold text-aetherius-muted">({reviews})</span>
     </div>
   );
 }
@@ -269,7 +281,7 @@ function TourCard({ tour, badge = false }: { tour: (typeof popularTours)[number]
   return (
     <article className="group">
       <Link href="/trips" className="block">
-        <div className="relative aspect-[1.8] overflow-hidden rounded-[10px] bg-camper-line">
+        <div className="relative aspect-[1.8] overflow-hidden rounded-[10px] bg-aetherius-line">
           <Image
             src={`${A}/${tour.image}`}
             alt={tour.title}
@@ -286,23 +298,23 @@ function TourCard({ tour, badge = false }: { tour: (typeof popularTours)[number]
         </div>
         <div className="pt-[36px]">
           <Rating reviews={tour.reviews} />
-          <h3 className="min-h-[58px] text-[28px] font-semibold leading-[1.2] tracking-[-0.5px] text-camper-heading transition-colors group-hover:text-camper-gold">
+          <h3 className="min-h-[58px] text-[28px] font-semibold leading-[1.2] tracking-[-0.5px] text-aetherius-heading transition-colors group-hover:text-aetherius-gold">
             {tour.title}
           </h3>
-          <div className="mt-[22px] space-y-[10px] text-[22px] font-semibold text-camper-muted">
+          <div className="mt-[22px] space-y-[10px] text-[22px] font-semibold text-aetherius-muted">
             <p className="flex items-center gap-3">
-              <Clock3 className="h-5 w-5 text-camper-muted" />
+              <Clock3 className="h-5 w-5 text-aetherius-muted" />
               {tour.duration}
             </p>
             <p className="flex items-center gap-3">
-              <MapPin className="h-5 w-5 text-camper-muted" />
+              <MapPin className="h-5 w-5 text-aetherius-muted" />
               {tour.location}
             </p>
           </div>
-          <p className="mt-[14px] text-[22px] font-semibold text-camper-muted">
+          <p className="mt-[14px] text-[22px] font-semibold text-aetherius-muted">
             From{' '}
-            {tour.oldPrice && <span className="mr-2 text-camper-muted line-through">{tour.oldPrice}</span>}
-            <span className="text-camper-gold">{tour.price}</span>
+            {tour.oldPrice && <span className="mr-2 text-aetherius-muted line-through">{tour.oldPrice}</span>}
+            <span className="text-aetherius-gold">{tour.price}</span>
           </p>
         </div>
       </Link>
@@ -332,7 +344,7 @@ function BlogCard({ post }: { post: (typeof posts)[number] }) {
           </h3>
           <div className="mt-[26px] flex gap-3">
             {['Camping', 'Travel'].map((tag) => (
-              <span key={tag} className="rounded-[7px] border border-camper-line px-[18px] py-[7px] text-[16px]">
+              <span key={tag} className="rounded-[7px] border border-aetherius-line px-[18px] py-[7px] text-[16px]">
                 {tag}
               </span>
             ))}
@@ -345,11 +357,11 @@ function BlogCard({ post }: { post: (typeof posts)[number] }) {
 
 export default function Home() {
   return (
-    <main className="min-h-screen overflow-x-hidden bg-white font-josefin text-camper-heading">
+    <main className="min-h-screen overflow-x-hidden bg-white font-josefin text-aetherius-heading">
       <Header />
 
       <section className="relative min-h-[780px] bg-black text-white">
-        <Image src={`${A}/hero-campger-bg.jpg`} alt="Camper view at sunset" fill priority sizes="100vw" className="object-cover" />
+        <Image src={`${A}/hero-campger-bg.jpg`} alt="Aetherius view at sunset" fill priority sizes="100vw" className="object-cover" />
         <div className="absolute inset-0 bg-black/25" />
         <FadeIn className="relative z-10 mx-auto flex min-h-[780px] max-w-[1180px] flex-col items-center justify-center px-5 pb-[52px] text-center">
           <p className="mb-[28px] text-[43px] font-medium uppercase leading-none tracking-[5px]">Explore</p>
@@ -357,7 +369,7 @@ export default function Home() {
           <p className="mt-[30px] text-[20px] font-normal text-white">Discover and book tent camping, RV parks, cabins, treehouses, and glamping.</p>
           <Link
             href="/trips"
-            className="mt-[42px] bg-camper-gold px-[38px] py-[18px] text-[15px] font-bold text-black transition-colors hover:bg-camper-gold-2"
+            className="mt-[42px] bg-aetherius-gold px-[38px] py-[18px] text-[15px] font-bold text-black transition-colors hover:bg-aetherius-gold-2"
           >
             Discover Tours
           </Link>
@@ -373,7 +385,7 @@ export default function Home() {
             <FadeIn key={feature.title} className="text-center">
               <Image src={feature.icon} alt="" width={125} height={125} loading="lazy" className="mx-auto h-[125px] w-[125px]" />
               <h2 className="mb-[23px] mt-[37px] text-[22px] font-semibold text-black">{feature.title}</h2>
-              <p className="mx-auto max-w-[360px] text-[19px] font-normal leading-[1.95] text-camper-muted">{feature.text}</p>
+              <p className="mx-auto max-w-[360px] text-[19px] font-normal leading-[1.95] text-aetherius-muted">{feature.text}</p>
             </FadeIn>
           ))}
         </div>
@@ -406,10 +418,10 @@ export default function Home() {
         <Image src={`${A}/Group-5825.jpg`} alt="" fill sizes="100vw" className="pointer-events-none object-cover object-center" />
         <SectionTitle title="Our Popular Tours" action="View All Tours" />
         <div className="relative mx-auto max-w-[1536px] px-5 md:px-[80px] xl:px-[182px]">
-          <button className="absolute left-[92px] top-[255px] hidden text-camper-arrow xl:block" aria-label="Previous popular tours">
+          <button className="absolute left-[92px] top-[255px] hidden text-aetherius-arrow xl:block" aria-label="Previous popular tours">
             <ChevronLeft className="h-12 w-12" strokeWidth={1.6} />
           </button>
-          <button className="absolute right-[92px] top-[255px] hidden text-camper-arrow xl:block" aria-label="Next popular tours">
+          <button className="absolute right-[92px] top-[255px] hidden text-aetherius-arrow xl:block" aria-label="Next popular tours">
             <ChevronRight className="h-12 w-12" strokeWidth={1.6} />
           </button>
           <div className="grid gap-[50px] md:grid-cols-3">
@@ -424,10 +436,10 @@ export default function Home() {
         <Image src={`${A}/hp-tour-bg-2-n.jpg`} alt="" fill sizes="100vw" className="pointer-events-none object-cover object-center opacity-[0.72]" />
         <SectionTitle title="New Tours" action="View All Tours" />
         <div className="relative mx-auto max-w-[1536px] px-5 md:px-[80px] xl:px-[182px]">
-          <button className="absolute left-[92px] top-[258px] hidden text-camper-arrow xl:block" aria-label="Previous new tours">
+          <button className="absolute left-[92px] top-[258px] hidden text-aetherius-arrow xl:block" aria-label="Previous new tours">
             <ChevronLeft className="h-12 w-12" strokeWidth={1.6} />
           </button>
-          <button className="absolute right-[92px] top-[258px] hidden text-camper-arrow xl:block" aria-label="Next new tours">
+          <button className="absolute right-[92px] top-[258px] hidden text-aetherius-arrow xl:block" aria-label="Next new tours">
             <ChevronRight className="h-12 w-12" strokeWidth={1.6} />
           </button>
           <div className="grid gap-[50px] md:grid-cols-3">
@@ -444,21 +456,21 @@ export default function Home() {
           <div className="min-h-[610px]" aria-hidden="true" />
           <FadeIn className="pt-[16px]">
             <h2 className="text-[43px] font-bold leading-[1.22] tracking-[-0.3px] text-[#262626]">
-              Camper is the best way to find camping tours. Let&apos;s make the most memorable adventures.
+              Aetherius is the best way to find camping tours. Let&apos;s make the most memorable adventures.
             </h2>
             <p className="mt-[42px] max-w-[690px] text-[22px] font-normal leading-[1.72] text-[#444444]">
-              Camper Tour is an incredible way to have an adventurous outdoor experience of world renowned national parks and wilderness destinations while hiking with only a light daypack and sleeping soundly in comfortable, vehicle-accessible camps.
+              Aetherius Tour is an incredible way to have an adventurous outdoor experience of world renowned national parks and wilderness destinations while hiking with only a light daypack and sleeping soundly in comfortable, vehicle-accessible camps.
             </p>
             <div className="mt-[70px] grid gap-14 md:grid-cols-2">
               <div>
                 <Image src={`${A}/w1.jpg`} alt="" width={64} height={64} loading="lazy" className="h-16 w-16" />
-                <p className="mt-[30px] text-[58px] font-bold leading-none text-camper-gold">1980</p>
+                <p className="mt-[30px] text-[58px] font-bold leading-none text-aetherius-gold">1980</p>
                 <h3 className="mt-[36px] text-[23px] font-bold text-black">The First Trip We Operated</h3>
                 <p className="mt-[20px] text-[20px] leading-[1.7] text-[#777777]">We are in this industries for more than 40 year!</p>
               </div>
               <div>
                 <Image src={`${A}/map.png`} alt="" width={64} height={64} loading="lazy" className="h-16 w-16" />
-                <p className="mt-[30px] text-[58px] font-bold leading-none text-camper-gold">1000+</p>
+                <p className="mt-[30px] text-[58px] font-bold leading-none text-aetherius-gold">1000+</p>
                 <h3 className="mt-[36px] text-[23px] font-bold text-black">Locations Worldwide</h3>
                 <p className="mt-[20px] text-[20px] leading-[1.7] text-[#777777]">With more than 1000 locations for your choices</p>
               </div>
@@ -492,7 +504,7 @@ export default function Home() {
           <p className="mx-auto mt-[24px] max-w-[820px] text-[18px] leading-[1.75] text-[#444444]">
             Our mountain tours take you to the highest peaks, where you can witness stunning vistas and enjoy the crisp mountain air. Our beach tours, on the other hand, offer a chance to relax and unwind on the sandy shores.
           </p>
-          <Link href="/trips" className="mt-[34px] inline-flex bg-camper-gold px-[30px] py-[16px] text-[15px] font-semibold text-black hover:bg-camper-gold-2">
+          <Link href="/trips" className="mt-[34px] inline-flex bg-aetherius-gold px-[30px] py-[16px] text-[15px] font-semibold text-black hover:bg-aetherius-gold-2">
             Discover Tours
           </Link>
         </FadeIn>
@@ -510,7 +522,7 @@ export default function Home() {
                   <p className="text-[16px] text-[#898989]">{place}</p>
                 </div>
               </div>
-              <div className="mt-6 flex text-camper-gold">
+              <div className="mt-6 flex text-aetherius-gold">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className="h-5 w-5 fill-current" strokeWidth={0} />
                 ))}
@@ -523,10 +535,10 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="bg-camper-footer text-white">
+      <footer className="bg-aetherius-footer text-white">
         <div className="mx-auto grid max-w-[1180px] gap-10 px-5 py-[70px] md:grid-cols-[1.15fr_0.85fr_0.85fr_1fr]">
           <div>
-            <Image src={`${A}/logo-camper.png`} alt="Camper" width={126} height={81} loading="lazy" className="h-auto w-[126px]" />
+            <Image src={`${A}/logo-aetherius.png`} alt="Aetherius" width={126} height={81} loading="lazy" className="h-auto w-[126px]" />
             <p className="mt-8 max-w-sm text-[17px] leading-[1.8] text-white/62">
               Discover and book tent camping, RV parks, cabins, treehouses, and glamping with TravelLoop.
             </p>

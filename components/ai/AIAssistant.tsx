@@ -5,10 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Send, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { useTripStore } from '@/store/tripStore';
+import { useAuthStore } from '@/store/authStore';
 
 export function AIAssistant() {
   const { aiPanelOpen, setAIPanelOpen } = useUIStore();
   const { activeTrip } = useTripStore();
+  const accessToken = useAuthStore((state) => state.accessToken);
   
   const [messages, setMessages] = useState<{role: string, content: string}[]>([
     { role: 'assistant', content: "Hi! I'm Traveloop AI. How can I help you plan your trip today?" }
@@ -27,6 +29,11 @@ export function AIAssistant() {
     e.preventDefault();
     if (!input.trim() || isStreaming) return;
 
+    if (!accessToken) {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Please sign in to use the AI assistant.' }]);
+      return;
+    }
+
     const userMessage = input;
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
@@ -41,7 +48,10 @@ export function AIAssistant() {
 
       const res = await fetch('/api/v1/ai/suggest', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`
+        },
         body: JSON.stringify({ prompt: userMessage, tripContext })
       });
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth/middleware';
 import { checkRateLimit } from '@/lib/db/redis';
 import { MOOD_MATCHER_PROMPT } from '@/lib/ai/prompts';
-import { anthropic } from '@/lib/ai/client';
+import { aiClient } from '@/lib/ai/client';
 import connectToDatabase from '@/lib/db/mongoose';
 import User from '@/lib/models/User';
 import { buildUserContext } from '@/lib/ai/context-builder';
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const user = await User.findById(auth.userId);
     const userContext = user ? buildUserContext(user) : '';
 
-    if (!anthropic) {
+    if (!aiClient) {
       return NextResponse.json({
         success: true,
         data: {
@@ -34,8 +34,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const msg = await anthropic.messages.create({
-      model: 'claude-3-sonnet-20240229',
+    const msg = await aiClient.messages.create({
       max_tokens: 1024,
       system: MOOD_MATCHER_PROMPT,
       messages: [{ role: 'user', content: `${userContext}\nRequested Moods: ${moods.join(', ')}` }]

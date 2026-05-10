@@ -1,16 +1,16 @@
 :root {
   --background: #ffffff;
   --foreground: #2f2f2f;
-  --camper-nav: #1c1c1c;
-  --camper-charcoal: #2b2b2b;
-  --camper-footer: #181818;
-  --camper-heading: #2f2f2f;
-  --camper-body: #444444;
-  --camper-muted: #717171;
-  --camper-field: #f3f3f3;
-  --camper-line: #e3e3e3;
-  --camper-gold: #ffaf19;
-  --camper-gold-2: #ffbd07;
+  --aetherius-nav: #1c1c1c;
+  --aetherius-charcoal: #2b2b2b;
+  --aetherius-footer: #181818;
+  --aetherius-heading: #2f2f2f;
+  --aetherius-body: #444444;
+  --aetherius-muted: #717171;
+  --aetherius-field: #f3f3f3;
+  --aetherius-line: #e3e3e3;
+  --aetherius-gold: #ffaf19;
+  --aetherius-gold-2: #ffbd07;
   --travel-yellow: #ffaf19;
   --travel-muted: #717171;
   --travel-line: #e6e1d6;

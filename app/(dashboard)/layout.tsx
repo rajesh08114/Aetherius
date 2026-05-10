@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
@@ -33,9 +34,16 @@ const NAV_ITEMS = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { sidebarOpen, toggleSidebar, setAIPanelOpen } = useUIStore();
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated, isLoading } = useAuthStore();
   const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   return (
     <div className="flex h-screen bg-[#0f172a] text-slate-50 overflow-hidden">

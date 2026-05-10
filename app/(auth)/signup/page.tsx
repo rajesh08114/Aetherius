@@ -10,15 +10,12 @@ import { Eye, EyeOff, Loader2, Mail, Lock, User as UserIcon, Sparkles, Users, Wa
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { useAuthStore } from '@/store/authStore';
 
 type RegisterForm = z.infer<typeof RegisterSchema>;
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAccessToken);
-  const setUser = useAuthStore((state) => state.setUser);
 
   const {
     register,
@@ -55,10 +52,8 @@ export default function SignupPage() {
       const json = await res.json();
 
       if (res.ok && json.success) {
-        setAuth(json.data.accessToken);
-        setUser(json.data.user);
-        toast.success('Account created! Welcome to Traveloop!');
-        router.push('/');
+        toast.success('Account created! Please sign in.');
+        router.push('/login');
       } else {
         toast.error(json.error || 'Failed to create account');
       }

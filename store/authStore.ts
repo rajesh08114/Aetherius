@@ -12,7 +12,7 @@ interface AuthStore {
   initAuth: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
+export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
   accessToken: null,
   isAuthenticated: false,
@@ -23,22 +23,42 @@ export const useAuthStore = create<AuthStore>((set) => ({
   setAccessToken: (token) => set({ accessToken: token }),
   
   logout: () => {
-    set({ user: null, accessToken: null, isAuthenticated: false });
-    // In a real app, also call /api/v1/auth/logout
-    fetch('/api/v1/auth/logout', { method: 'POST' }).catch(console.error);
+    const token = get().accessToken;
+    set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
+    fetch('/api/v1/auth/logout', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined
+    }).catch(console.error);
   },
   
   initAuth: async () => {
+    set({ isLoading: true });
     try {
-      const res = await fetch('/api/v1/auth/me');
-      if (res.ok) {
-        const { data } = await res.json();
-        set({ user: data.user, isAuthenticated: true, isLoading: false });
+      const refreshRes = await fetch('/api/v1/auth/refresh', { method: 'POST' });
+      if (!refreshRes.ok) {
+        set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
+        return;
+      }
+
+      const refreshJson = await refreshRes.json();
+      const accessToken = refreshJson?.data?.accessToken as string | undefined;
+      if (!accessToken) {
+        set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
+        return;
+      }
+
+      const meRes = await fetch('/api/v1/auth/me', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+
+      if (meRes.ok) {
+        const { data } = await meRes.json();
+        set({ user: data.user, accessToken, isAuthenticated: true, isLoading: false });
       } else {
-        set({ user: null, isAuthenticated: false, isLoading: false });
+        set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
       }
     } catch (error) {
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
     }
   }
 }));

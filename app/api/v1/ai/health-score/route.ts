@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth/middleware';
 import { checkRateLimit } from '@/lib/db/redis';
 import { ITINERARY_HEALTH_PROMPT, CONFLICT_DETECTOR_PROMPT } from '@/lib/ai/prompts';
-import { anthropic } from '@/lib/ai/client';
+import { aiClient } from '@/lib/ai/client';
 import connectToDatabase from '@/lib/db/mongoose';
 import Trip from '@/lib/models/Trip';
 import Stop from '@/lib/models/Stop';
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const stops = await Stop.find({ tripId }).sort({ order: 1 });
     const itinerary = stops.map(s => `${s.cityName} (Arrival: ${s.arrivalDate}, Departure: ${s.departureDate})`).join(' -> ');
 
-    if (!anthropic) {
+    if (!aiClient) {
       const mockResult = {
         score: 85,
         issues: [{ type: "pacing", severity: "medium", description: "Only 1 night in Paris is rushed", suggestion: "Add 1 more night" }],
@@ -38,15 +38,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, data: mockResult });
     }
 
-    const msgHealth = await anthropic.messages.create({
-      model: 'claude-3-sonnet-20240229',
+    const msgHealth = await aiClient.messages.create({
       max_tokens: 1024,
       system: ITINERARY_HEALTH_PROMPT,
       messages: [{ role: 'user', content: `Itinerary: ${itinerary}` }]
     });
 
-    const msgConflict = await anthropic.messages.create({
-      model: 'claude-3-sonnet-20240229',
+    const msgConflict = await aiClient.messages.create({
       max_tokens: 1024,
       system: CONFLICT_DETECTOR_PROMPT,
       messages: [{ role: 'user', content: `Itinerary: ${itinerary}` }]
