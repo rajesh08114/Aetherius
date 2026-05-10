@@ -1,0 +1,26 @@
+
+> traveloop@0.1.0 predev
+> npm run build:css
+
+
+> traveloop@0.1.0 build:css
+> tailwindcss -i ./app/tailwind.css -o ./app/tailwind.generated.css --content "./app/**/*.{js,ts,jsx,tsx,mdx}" "./components/**/*.{js,ts,jsx,tsx,mdx}" --minify
+
+
+> traveloop@0.1.0 dev
+> next dev -p 3003
+
+  ▲ Next.js 14.2.29
+  - Local:        http://localhost:3003
+
+ ✓ Starting...
+ ✓ Ready in 1769ms
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 1449ms (72 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 13.1s (681 modules)
+ GET / 200 in 13991ms
+ ✓ Compiled in 36ms
+ ✓ Compiled in 1234ms (351 modules)
+ ✓ Compiled in 308ms (338 modules)
+ ✓ Compiled in 410ms (338 modules)
