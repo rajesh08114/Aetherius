@@ -83,7 +83,7 @@ export default function Home() {
       {/* Decorative mountain background */}
       <div
         className="pointer-events-none absolute bottom-0 left-0 right-0 h-[1000px] bg-bottom bg-no-repeat opacity-70 mix-blend-multiply"
-        style={{ backgroundImage: "url('aetherius/assets/hp-tour-bg-2-n.jpg')", backgroundSize: "100% auto" }}
+        style={{ backgroundImage: "url('/aetherius/assets/hp-tour-bg-2-n.jpg')", backgroundSize: "100% auto" }}
       />
       <Header />
 

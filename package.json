@@ -7,7 +7,11 @@
     "predev": "npm run build:css",
     "dev": "next dev",
     "prebuild": "npm run build:css",
-    "build": "next build",
+    
+    
+    "build": "prisma generate && next build",
+    "postinstall": "prisma generate",
+
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -35,7 +39,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.400.0",
     "maplibre-gl": "^4.7.1",
-    "next": "14.2.29",
+    "next": "^14.2.35",
     "prisma": "^6.19.3",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -57,7 +61,7 @@
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
-    "eslint-config-next": "14.2.29",
+    "eslint-config-next": "^16.2.6",
     "mongodb-memory-server": "^11.1.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",

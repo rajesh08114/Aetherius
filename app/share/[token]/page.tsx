@@ -3,16 +3,14 @@ import { notFound } from 'next/navigation';
 import { Calendar, Users, Globe } from 'lucide-react';
 import { ExportButton } from '@/components/trips/ExportButton';
 import Image from 'next/image';
-import { TripVisibility } from '@prisma/client';
-
-export const dynamic = 'force-dynamic';
+import { Key, ReactElement, JSXElementConstructor, ReactNode, ReactPortal, AwaitedReactNode } from 'react';
 
 export default async function PublicTripSharePage({ params }: { params: { token: string } }) {
   const trip = await prisma.trip.findUnique({
     where: { shareToken: params.token },
     include: { user: { select: { name: true } } }
   });
-  
+
   if (!trip) {
     notFound();
   }
@@ -82,7 +80,7 @@ export default async function PublicTripSharePage({ params }: { params: { token:
         </div>
 
         <div className="space-y-8 relative before:absolute before:inset-0 before:ml-6 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-amber-500 before:to-slate-800">
-          {stops.map((stop, idx) => {
+          {stops.map((stop: { arrivalDate: string | number | Date; departureDate: string | number | Date; id: Key | null | undefined; cityName: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined; country: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined; notes: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined; }, idx: number) => {
             const arrivalDate = stop.arrivalDate ? new Date(stop.arrivalDate) : null;
             const departureDate = stop.departureDate ? new Date(stop.departureDate) : null;
             const nights = arrivalDate && departureDate
@@ -99,7 +97,7 @@ export default async function PublicTripSharePage({ params }: { params: { token:
                     {stop.cityName}
                   </h3>
                   <p className="text-sm text-slate-400 mb-4">{stop.country} • {nights} Nights</p>
-                  
+
                   {stop.notes && (
                     <p className="text-slate-300 text-sm bg-slate-900/50 p-3 rounded-lg border border-slate-800 italic">
                       &ldquo;{stop.notes}&rdquo;

@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     if (!trip) return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
 
     const stops = await prisma.stop.findMany({ where: { tripId }, orderBy: { order: 'asc' } });
-    const itinerary = stops.map(s => `${s.cityName} (Arrival: ${s.arrivalDate}, Departure: ${s.departureDate})`).join(' -> ');
+    const itinerary = stops.map((s: { cityName: any; arrivalDate: any; departureDate: any; }) => `${s.cityName} (Arrival: ${s.arrivalDate}, Departure: ${s.departureDate})`).join(' -> ');
 
     if (!aiClient) {
       const mockResult = {
