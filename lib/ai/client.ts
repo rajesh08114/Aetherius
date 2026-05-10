@@ -5,12 +5,12 @@ type ChatMessage = {
   content: string;
 };
 
-type ChatRequest = {
+type ChatRequest<TStream extends boolean | undefined = boolean | undefined> = {
   model?: string;
   max_tokens?: number;
   system?: string;
   messages: ChatMessage[];
-  stream?: boolean;
+  stream?: TStream;
 };
 
 type StreamChunk = {
@@ -21,11 +21,24 @@ type StreamChunk = {
   };
 };
 
+type ChatResponse<TStream extends boolean | undefined> = TStream extends true
+  ? AsyncGenerator<StreamChunk>
+  : { content: { type: 'text'; text: string }[] };
+
 const hfApiKey = process.env.HF_API_KEY;
 const hfBaseUrl = (process.env.HF_INFERENCE_URL || 'https://router.huggingface.co/v1').replace(/\/+$/, '');
 const hfModelId = process.env.HF_MODEL_ID || process.env.HF_QWEN_MODEL_ID;
+const hfFallbackModelsRaw = process.env.HF_MODEL_FALLBACKS || '';
+const hfFallbackModels = hfFallbackModelsRaw
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
 
-const hasHfConfig = Boolean(hfApiKey && hfModelId);
+const defaultModelCandidates = Array.from(
+  new Set([hfModelId, ...hfFallbackModels].filter((m): m is string => Boolean(m)))
+);
+
+const hasHfConfig = Boolean(hfApiKey && defaultModelCandidates.length > 0);
 
 const buildMessages = (system: string | undefined, messages: ChatMessage[]) => {
   const base = system ? [{ role: 'system' as const, content: system }] : [];
@@ -39,7 +52,12 @@ const getChatText = (payload: any) => {
   return typeof generatedText === 'string' ? generatedText : '';
 };
 
-const createChatCompletion = async (request: ChatRequest) => {
+const resolveModelCandidates = (requestModel?: string) => {
+  if (!requestModel) return defaultModelCandidates;
+  return Array.from(new Set([requestModel, ...defaultModelCandidates]));
+};
+
+const createChatCompletionForModel = async (request: ChatRequest, model: string) => {
   const response = await fetch(`${hfBaseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -47,7 +65,7 @@ const createChatCompletion = async (request: ChatRequest) => {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: request.model || hfModelId,
+      model,
       max_tokens: request.max_tokens,
       messages: buildMessages(request.system, request.messages),
       stream: false
@@ -65,7 +83,22 @@ const createChatCompletion = async (request: ChatRequest) => {
   };
 };
 
-const streamChatCompletion = async function* (request: ChatRequest): AsyncGenerator<StreamChunk> {
+const createChatCompletion = async (request: ChatRequest) => {
+  const models = resolveModelCandidates(request.model);
+  let lastError: Error | null = null;
+
+  for (const model of models) {
+    try {
+      return await createChatCompletionForModel(request, model);
+    } catch (error: any) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  throw lastError || new Error('HF chat completion failed: no model succeeded');
+};
+
+const streamChatCompletionForModel = async function* (request: ChatRequest<true>, model: string): AsyncGenerator<StreamChunk> {
   const response = await fetch(`${hfBaseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -73,7 +106,7 @@ const streamChatCompletion = async function* (request: ChatRequest): AsyncGenera
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: request.model || hfModelId,
+      model,
       max_tokens: request.max_tokens,
       messages: buildMessages(request.system, request.messages),
       stream: true
@@ -125,13 +158,44 @@ const streamChatCompletion = async function* (request: ChatRequest): AsyncGenera
   }
 };
 
+const streamChatCompletion = async function* (request: ChatRequest<true>): AsyncGenerator<StreamChunk> {
+  const models = resolveModelCandidates(request.model);
+  let lastError: Error | null = null;
+
+  for (const model of models) {
+    try {
+      let emittedAnyChunk = false;
+      for await (const chunk of streamChatCompletionForModel(request, model)) {
+        emittedAnyChunk = true;
+        yield chunk;
+      }
+
+      if (!emittedAnyChunk) {
+        continue;
+      }
+
+      return;
+    } catch (error: any) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  throw lastError || new Error('HF stream failed: no model succeeded');
+};
+
+const createMessage = async <TStream extends boolean | undefined>(
+  request: ChatRequest<TStream>
+): Promise<ChatResponse<TStream>> => {
+  if (request.stream) {
+    return streamChatCompletion(request as ChatRequest<true>) as ChatResponse<TStream>;
+  }
+  return (createChatCompletion(request) as unknown) as ChatResponse<TStream>;
+};
+
 export const aiClient = hasHfConfig
   ? {
       messages: {
-        create: async (request: ChatRequest) => {
-          if (request.stream) return streamChatCompletion(request);
-          return createChatCompletion(request);
-        }
+        create: createMessage
       }
     }
   : null;

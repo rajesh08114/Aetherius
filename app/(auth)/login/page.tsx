@@ -19,6 +19,7 @@ export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAccessToken);
   const setUser = useAuthStore((state) => state.setUser);
+  const initAuth = useAuthStore((state) => state.initAuth);
 
   const {
     register,
@@ -32,6 +33,7 @@ export default function LoginPage() {
     try {
       const res = await fetch('/api/v1/auth/login', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
@@ -41,8 +43,12 @@ export default function LoginPage() {
       if (res.ok && json.success) {
         setAuth(json.data.accessToken);
         setUser(json.data.user);
+        await initAuth();
         toast.success('Welcome back!');
-        router.push('/');
+        const nextPath = typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('from') || '/trips'
+          : '/trips';
+        router.push(nextPath);
       } else {
         toast.error(json.error || 'Failed to login');
       }
@@ -52,14 +58,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex w-full bg-[#0f172a] text-slate-50">
+    <div className="min-h-screen flex w-full bg-[#f7f4ec] text-aetherius-heading">
       {/* LEFT SIDE: Visuals */}
-      <div className="hidden lg:flex w-1/2 flex-col justify-between p-12 bg-slate-900 relative overflow-hidden border-r border-slate-800">
+      <div className="hidden lg:flex w-1/2 flex-col justify-between p-12 bg-aetherius-nav relative overflow-hidden border-r border-black/20 text-white">
         <div className="z-10">
           <h1 className="text-4xl font-syne font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent mb-4">
             Traveloop
           </h1>
-          <p className="text-xl text-slate-300 font-sans">Plan. Explore. Remember.</p>
+          <p className="text-xl text-white/80 font-sans">Plan. Explore. Remember.</p>
         </div>
 
         {/* Abstract World Map with pulsing dots */}
@@ -104,16 +110,16 @@ export default function LoginPage() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md glass-card rounded-2xl p-8"
+            className="w-full max-w-md rounded-2xl border border-aetherius-line bg-white p-8 shadow-[0_18px_45px_rgba(0,0,0,0.08)]"
         >
           <div className="text-center mb-8">
             <h2 className="text-3xl font-syne font-bold mb-2">Welcome back</h2>
-            <p className="text-slate-400 text-sm">Sign in to your account to continue</p>
+            <p className="text-aetherius-muted text-sm">Sign in to your account to continue</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+              <label className="block text-sm font-medium text-aetherius-heading mb-1">Email</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail className="h-5 w-5 text-slate-500" />
@@ -121,7 +127,7 @@ export default function LoginPage() {
                 <input
                   {...register('email')}
                   type="email"
-                  className="block w-full pl-10 pr-3 py-2 border border-slate-700 rounded-lg bg-slate-800/50 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
+                  className="block w-full pl-10 pr-3 py-2 border border-aetherius-line rounded-lg bg-aetherius-field text-aetherius-heading placeholder-aetherius-muted focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
                   placeholder="you@example.com"
                 />
               </div>
@@ -130,8 +136,8 @@ export default function LoginPage() {
 
             <div>
               <div className="flex justify-between items-center mb-1">
-                <label className="block text-sm font-medium text-slate-300">Password</label>
-                <Link href="#" className="text-xs text-amber-500 hover:text-amber-400 transition-colors">
+                <label className="block text-sm font-medium text-aetherius-heading">Password</label>
+                <Link href="/forgot-password" className="text-xs text-amber-500 hover:text-amber-400 transition-colors">
                   Forgot password?
                 </Link>
               </div>
@@ -142,7 +148,7 @@ export default function LoginPage() {
                 <input
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
-                  className="block w-full pl-10 pr-10 py-2 border border-slate-700 rounded-lg bg-slate-800/50 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
+                  className="block w-full pl-10 pr-10 py-2 border border-aetherius-line rounded-lg bg-aetherius-field text-aetherius-heading placeholder-aetherius-muted focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
                   placeholder="••••••••"
                 />
                 <button
@@ -172,17 +178,17 @@ export default function LoginPage() {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-700" />
+                <div className="w-full border-t border-aetherius-line" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-[#1e293b] text-slate-400">Or continue with</span>
+                <span className="px-2 bg-white text-aetherius-muted">Or continue with</span>
               </div>
             </div>
 
             <div className="mt-6">
               <button
                 disabled
-                className="w-full flex justify-center items-center py-2.5 px-4 border border-slate-700 rounded-lg shadow-sm bg-slate-800/50 text-sm font-medium text-slate-300 opacity-60 cursor-not-allowed group relative"
+                className="w-full flex justify-center items-center py-2.5 px-4 border border-aetherius-line rounded-lg shadow-sm bg-aetherius-field text-sm font-medium text-aetherius-muted opacity-60 cursor-not-allowed group relative"
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -195,7 +201,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <p className="mt-8 text-center text-sm text-slate-400">
+          <p className="mt-8 text-center text-sm text-aetherius-muted">
             Don&apos;t have an account?{' '}
             <Link href="/signup" className="font-medium text-amber-500 hover:text-amber-400 transition-colors">
               Sign up

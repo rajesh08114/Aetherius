@@ -10,12 +10,16 @@ import { Eye, EyeOff, Loader2, Mail, Lock, User as UserIcon, Sparkles, Users, Wa
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/store/authStore';
 
 type RegisterForm = z.infer<typeof RegisterSchema>;
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const setAuth = useAuthStore((state) => state.setAccessToken);
+  const setUser = useAuthStore((state) => state.setUser);
+  const initAuth = useAuthStore((state) => state.initAuth);
 
   const {
     register,
@@ -45,6 +49,7 @@ export default function SignupPage() {
     try {
       const res = await fetch('/api/v1/auth/register', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
@@ -52,8 +57,11 @@ export default function SignupPage() {
       const json = await res.json();
 
       if (res.ok && json.success) {
-        toast.success('Account created! Please sign in.');
-        router.push('/login');
+        setAuth(json.data.accessToken);
+        setUser(json.data.user);
+        await initAuth();
+        toast.success('Account created successfully!');
+        router.push('/trips');
       } else {
         toast.error(json.error || 'Failed to create account');
       }
@@ -63,14 +71,14 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex w-full bg-[#0f172a] text-slate-50">
+    <div className="min-h-screen flex w-full bg-[#f7f4ec] text-aetherius-heading">
       {/* LEFT SIDE: Visuals */}
-      <div className="hidden lg:flex w-1/2 flex-col justify-between p-12 bg-slate-900 relative overflow-hidden border-r border-slate-800">
+      <div className="hidden lg:flex w-1/2 flex-col justify-between p-12 bg-aetherius-nav relative overflow-hidden border-r border-black/20 text-white">
         <div className="z-10">
           <h1 className="text-4xl font-syne font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent mb-4">
             Traveloop
           </h1>
-          <p className="text-xl text-slate-300 font-sans">Plan. Explore. Remember.</p>
+          <p className="text-xl text-white/80 font-sans">Plan. Explore. Remember.</p>
         </div>
 
         <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
@@ -113,16 +121,16 @@ export default function SignupPage() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md glass-card rounded-2xl p-8 my-auto"
+            className="w-full max-w-md rounded-2xl border border-aetherius-line bg-white p-8 my-auto shadow-[0_18px_45px_rgba(0,0,0,0.08)]"
         >
           <div className="text-center mb-8">
             <h2 className="text-3xl font-syne font-bold mb-2">Create an account</h2>
-            <p className="text-slate-400 text-sm">Start planning your next adventure</p>
+            <p className="text-aetherius-muted text-sm">Start planning your next adventure</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Full Name</label>
+              <label className="block text-sm font-medium text-aetherius-heading mb-1">Full Name</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <UserIcon className="h-5 w-5 text-slate-500" />
@@ -130,7 +138,7 @@ export default function SignupPage() {
                 <input
                   {...register('name')}
                   type="text"
-                  className="block w-full pl-10 pr-3 py-2 border border-slate-700 rounded-lg bg-slate-800/50 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
+                  className="block w-full pl-10 pr-3 py-2 border border-aetherius-line rounded-lg bg-aetherius-field text-aetherius-heading placeholder-aetherius-muted focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
                   placeholder="John Doe"
                 />
               </div>
@@ -138,7 +146,7 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+              <label className="block text-sm font-medium text-aetherius-heading mb-1">Email</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail className="h-5 w-5 text-slate-500" />
@@ -146,7 +154,7 @@ export default function SignupPage() {
                 <input
                   {...register('email')}
                   type="email"
-                  className="block w-full pl-10 pr-3 py-2 border border-slate-700 rounded-lg bg-slate-800/50 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
+                  className="block w-full pl-10 pr-3 py-2 border border-aetherius-line rounded-lg bg-aetherius-field text-aetherius-heading placeholder-aetherius-muted focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
                   placeholder="you@example.com"
                 />
               </div>
@@ -154,7 +162,7 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
+              <label className="block text-sm font-medium text-aetherius-heading mb-1">Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-slate-500" />
@@ -162,7 +170,7 @@ export default function SignupPage() {
                 <input
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
-                  className="block w-full pl-10 pr-10 py-2 border border-slate-700 rounded-lg bg-slate-800/50 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
+                  className="block w-full pl-10 pr-10 py-2 border border-aetherius-line rounded-lg bg-aetherius-field text-aetherius-heading placeholder-aetherius-muted focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
                   placeholder="••••••••"
                 />
                 <button
@@ -191,7 +199,7 @@ export default function SignupPage() {
                     initial={false}
                     animate={{ backgroundColor: strength >= level 
                       ? strength <= 2 ? '#ef4444' : strength <= 3 ? '#fbbf24' : '#22c55e'
-                      : '#334155' }}
+                      : '#e3e3e3' }}
                   />
                 ))}
               </div>
@@ -200,7 +208,7 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Confirm Password</label>
+              <label className="block text-sm font-medium text-aetherius-heading mb-1">Confirm Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-slate-500" />
@@ -208,7 +216,7 @@ export default function SignupPage() {
                 <input
                   {...register('confirmPassword')}
                   type={showPassword ? 'text' : 'password'}
-                  className="block w-full pl-10 pr-3 py-2 border border-slate-700 rounded-lg bg-slate-800/50 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
+                  className="block w-full pl-10 pr-3 py-2 border border-aetherius-line rounded-lg bg-aetherius-field text-aetherius-heading placeholder-aetherius-muted focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
                   placeholder="••••••••"
                 />
               </div>
@@ -219,10 +227,10 @@ export default function SignupPage() {
               <input
                 id="terms"
                 type="checkbox"
-                className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900"
+                className="h-4 w-4 rounded border-aetherius-line bg-aetherius-field text-amber-500 focus:ring-amber-500"
                 required
               />
-              <label htmlFor="terms" className="ml-2 block text-sm text-slate-400">
+              <label htmlFor="terms" className="ml-2 block text-sm text-aetherius-muted">
                 I agree to the <Link href="#" className="text-amber-500 hover:underline">Terms</Link> and <Link href="#" className="text-amber-500 hover:underline">Privacy Policy</Link>
               </label>
             </div>
@@ -236,7 +244,7 @@ export default function SignupPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-400">
+          <p className="mt-6 text-center text-sm text-aetherius-muted">
             Already have an account?{' '}
             <Link href="/login" className="font-medium text-amber-500 hover:text-amber-400 transition-colors">
               Sign in

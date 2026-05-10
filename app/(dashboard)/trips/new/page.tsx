@@ -9,6 +9,7 @@ import { useCreateTrip } from '@/hooks/useTrips';
 import { toast } from 'sonner';
 import { CitySearchModal } from '@/components/city/CitySearchModal';
 import { City, TripVisibility } from '@/types';
+import { authFetch } from '@/lib/utils/authFetch';
 
 export default function NewTripPage() {
   const router = useRouter();
@@ -63,7 +64,7 @@ export default function NewTripPage() {
           order: 1
         };
         
-        await fetch(`/api/v1/trips/${trip._id}/stops`, {
+        await authFetch(`/api/v1/trips/${trip._id}/stops`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(stopData)

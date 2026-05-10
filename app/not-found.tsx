@@ -12,10 +12,11 @@ export default function NotFound() {
         <h1 className="text-4xl font-syne font-bold text-slate-100 mb-2">404</h1>
         <h2 className="text-xl font-medium text-slate-300 mb-4">Lost your way?</h2>
         <p className="text-slate-500 mb-8">The destination you are looking for doesn&apos;t exist or has been moved.</p>
-        <Link href="/">
-          <button className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-900 rounded-xl font-bold shadow-lg shadow-amber-500/20 transition-all w-full">
-            Return Home
-          </button>
+        <Link
+          href="/"
+          className="inline-flex w-full justify-center px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-900 rounded-xl font-bold shadow-lg shadow-amber-500/20 transition-all"
+        >
+          Return Home
         </Link>
       </div>
     </div>

@@ -1,0 +1,247 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum TripVisibility {
+  private
+  public
+  link_only
+}
+
+enum TripStatus {
+  planning
+  ongoing
+  completed
+}
+
+enum ActivityType {
+  sightseeing
+  food
+  adventure
+  culture
+  shopping
+  nightlife
+}
+
+enum ActivityStatus {
+  planned
+  booked
+  done
+  skipped
+}
+
+enum TransportMode {
+  flight
+  train
+  bus
+  drive
+  ferry
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  name               String
+  email              String   @unique
+  passwordHash       String
+  avatar             String?
+  role               UserRole @default(user)
+  languagePreference String   @default("en")
+  refreshTokenHash   String?
+  moodPreferences    String[] @default([])
+  travelPersonality  String?
+  carbonScore        Float    @default(0)
+  totalKmTraveled    Float    @default(0)
+  countriesVisited   String[] @default([])
+  followersCount     Int      @default(0)
+  followingCount     Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  trips            Trip[]
+  checklistEntries Checklist[]
+  followers        Follow[]           @relation("followers")
+  following        Follow[]           @relation("following")
+  likes            TripLike[]
+  comments         TripComment[]
+  collaborations   TripCollaborator[]
+}
+
+model Trip {
+  id            String         @id @default(cuid())
+  userId        String
+  name          String
+  description   String?
+  coverPhoto    String?
+  startDate     DateTime?
+  endDate       DateTime?
+  totalBudget   Float?
+  currency      String         @default("USD")
+  visibility    TripVisibility @default(private)
+  shareToken    String?        @unique
+  status        TripStatus     @default(planning)
+  tags          String[]       @default([])
+  aiHealthScore Float?
+  carbonKg      Float          @default(0)
+  likesCount    Int            @default(0)
+  viewCount     Int            @default(0)
+  forkCount     Int            @default(0)
+  forkedFromId  String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stops         Stop[]
+  activities    Activity[]
+  checklist     Checklist?
+  likes         TripLike[]
+  comments      TripComment[]
+  collaborators TripCollaborator[]
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model TripCollaborator {
+  id        String   @id @default(cuid())
+  tripId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+}
+
+model Stop {
+  id                 String    @id @default(cuid())
+  tripId             String
+  cityId             String?
+  cityName           String
+  country            String
+  coordinates        Json?
+  arrivalDate        DateTime?
+  departureDate      DateTime?
+  order              Int
+  accommodation      Json?
+  transportTo        Json?
+  estimatedDailyCost Float?
+  notes              String?
+  weatherCache       Json?
+  carbonKg           Float     @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  trip       Trip       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  city       City?      @relation(fields: [cityId], references: [id])
+  activities Activity[]
+
+  @@index([tripId, order])
+}
+
+model Activity {
+  id            String         @id @default(cuid())
+  stopId        String
+  tripId        String
+  name          String
+  type          ActivityType
+  description   String?
+  cost          Float
+  duration      Int?
+  scheduledTime DateTime?
+  images        String[]       @default([])
+  location      Json?
+  status        ActivityStatus @default(planned)
+  rating        Int?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  stop Stop @relation(fields: [stopId], references: [id], onDelete: Cascade)
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([stopId, scheduledTime])
+}
+
+model City {
+  id           String   @id @default(cuid())
+  name         String
+  country      String
+  countryCode  String?
+  region       String?
+  coordinates  Json
+  costIndex    Int?
+  popularity   Int?
+  avgDailyCost Json?
+  timezone     String?
+  currency     String?
+  description  String?
+  images       String[] @default([])
+  tags         String[] @default([])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  stops Stop[]
+
+  @@index([name])
+  @@index([country])
+}
+
+model Checklist {
+  id        String   @id @default(cuid())
+  tripId    String   @unique
+  userId    String
+  items     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("followers", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+}
+
+model TripLike {
+  id        String   @id @default(cuid())
+  userId    String
+  tripId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tripId])
+}
+
+model TripComment {
+  id        String   @id @default(cuid())
+  tripId    String
+  userId    String
+  content   String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, createdAt(sort: Desc)])
+}

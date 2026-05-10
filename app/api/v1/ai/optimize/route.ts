@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth/middleware';
 import { checkRateLimit } from '@/lib/db/redis';
 import { BUDGET_OPTIMIZER_PROMPT } from '@/lib/ai/prompts';
 import { aiClient } from '@/lib/ai/client';
+import { extractJsonObject } from '@/lib/ai/json';
 import connectToDatabase from '@/lib/db/mongoose';
 import Trip from '@/lib/models/Trip';
 import Stop from '@/lib/models/Stop';
@@ -49,16 +50,22 @@ export async function POST(req: Request) {
 
     const msg = await aiClient.messages.create({
       max_tokens: 1024,
+      stream: false,
       system: BUDGET_OPTIMIZER_PROMPT,
       messages: [{ role: 'user', content: JSON.stringify(tripData) }]
     });
 
     const responseText = msg.content[0].type === 'text' ? msg.content[0].text : '{}';
-    const jsonStart = responseText.indexOf('{');
-    const jsonEnd = responseText.lastIndexOf('}') + 1;
-    const jsonString = responseText.substring(jsonStart, jsonEnd);
-    
-    return NextResponse.json({ success: true, data: JSON.parse(jsonString) });
+    const parsed = extractJsonObject(responseText);
+    const data = Object.keys(parsed).length > 0
+      ? parsed
+      : {
+          savings: [],
+          totalPotentialSaving: 0,
+          topTip: 'Try adjusting accommodation and transport for better savings.'
+        };
+
+    return NextResponse.json({ success: true, data });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

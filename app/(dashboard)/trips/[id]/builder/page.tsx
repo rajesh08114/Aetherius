@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useTripStore } from '@/store/tripStore';
 import { useTrip, useReorderStops, useAddStop, useDeleteStop } from '@/hooks/useTrip';
 import { PageTransition } from '@/components/shared/PageTransition';
@@ -93,6 +94,17 @@ export default function BuilderPage({ params }: { params: { id: string } }) {
                 <CarbonBadge tripId={params.id} />
               </div>
               <p className="text-slate-400 text-sm">{optimisticStops.length} Destinations</p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Link href={`/trips/${params.id}/itinerary`} className="text-xs px-2 py-1 rounded bg-slate-800 text-slate-300 hover:text-amber-400">
+                  Itinerary View
+                </Link>
+                <Link href={`/trips/${params.id}/activities`} className="text-xs px-2 py-1 rounded bg-slate-800 text-slate-300 hover:text-amber-400">
+                  Activities
+                </Link>
+                <Link href={`/trips/${params.id}/notes`} className="text-xs px-2 py-1 rounded bg-slate-800 text-slate-300 hover:text-amber-400">
+                  Notes
+                </Link>
+              </div>
             </div>
             <button 
               onClick={() => setCityModalOpen(true)}

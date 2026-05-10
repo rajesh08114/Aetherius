@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth/middleware';
 import { checkRateLimit } from '@/lib/db/redis';
 import { PACKING_EXPERT_PROMPT } from '@/lib/ai/prompts';
 import { aiClient } from '@/lib/ai/client';
+import { extractJsonObject } from '@/lib/ai/json';
 import connectToDatabase from '@/lib/db/mongoose';
 import Trip from '@/lib/models/Trip';
 import Stop from '@/lib/models/Stop';
@@ -37,13 +38,14 @@ export async function POST(req: Request) {
     } else {
       const msg = await aiClient.messages.create({
         max_tokens: 1024,
+        stream: false,
         system: PACKING_EXPERT_PROMPT,
         messages: [{ role: 'user', content: tripContext }]
       });
 
       const responseText = msg.content[0].type === 'text' ? msg.content[0].text : '{}';
-      const parsed = JSON.parse(responseText.substring(responseText.indexOf('{'), responseText.lastIndexOf('}') + 1) || '{"items":[]}');
-      items = parsed.items || [];
+      const parsed = extractJsonObject(responseText);
+      items = Array.isArray(parsed.items) ? parsed.items : [];
     }
 
     const formattedItems = items.map((item: any) => ({

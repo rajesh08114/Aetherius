@@ -9,6 +9,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const stopId = searchParams.get('stopId');
     const type = searchParams.get('type');
+    const q = searchParams.get('q');
+    const maxCost = searchParams.get('maxCost');
+    const maxDuration = searchParams.get('maxDuration');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
 
@@ -17,6 +20,9 @@ export async function GET(req: Request) {
     const query: any = {};
     if (stopId) query.stopId = stopId;
     if (type) query.type = type;
+    if (q) query.name = { $regex: q, $options: 'i' };
+    if (maxCost) query.cost = { ...(query.cost || {}), $lte: Number(maxCost) };
+    if (maxDuration) query.duration = { ...(query.duration || {}), $lte: Number(maxDuration) };
 
     const skip = (page - 1) * limit;
 

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trip, TripVisibility } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { authFetch } from '@/lib/utils/authFetch';
 
 export interface CreateTripInput {
   name: string;
@@ -18,27 +19,22 @@ export function useTrips(status: string = 'all', sort: string = 'createdAt') {
   return useQuery({
     queryKey: ['trips', status, sort],
     queryFn: async () => {
-      const res = await fetch(`/api/v1/trips?status=${status}&sort=${sort}`,
-        { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined }
-      );
+      const res = await authFetch(`/api/v1/trips?status=${status}&sort=${sort}`);
       if (!res.ok) throw new Error('Failed to fetch trips');
       const json = await res.json();
       return json.data as Trip[];
-    }
+    },
+    enabled: !!accessToken
   });
 }
 
 export function useCreateTrip() {
   const queryClient = useQueryClient();
-  const accessToken = useAuthStore((state) => state.accessToken);
   return useMutation({
     mutationFn: async (data: CreateTripInput) => {
-      const res = await fetch('/api/v1/trips', {
+      const res = await authFetch('/api/v1/trips', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       if (!res.ok) throw new Error('Failed to create trip');
@@ -53,13 +49,9 @@ export function useCreateTrip() {
 
 export function useDeleteTrip() {
   const queryClient = useQueryClient();
-  const accessToken = useAuthStore((state) => state.accessToken);
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/v1/trips/${id}`, {
-        method: 'DELETE',
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined
-      });
+      const res = await authFetch(`/api/v1/trips/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete trip');
       return true;
     },

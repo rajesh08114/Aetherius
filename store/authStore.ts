@@ -18,15 +18,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   isAuthenticated: false,
   isLoading: true,
   
-  setUser: (user) => set({ user, isAuthenticated: true }),
+  setUser: (user) => set({ user, isAuthenticated: true, isLoading: false }),
   
-  setAccessToken: (token) => set({ accessToken: token }),
+  setAccessToken: (token) => set({ accessToken: token, isLoading: false }),
   
   logout: () => {
     const token = get().accessToken;
     set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
     fetch('/api/v1/auth/logout', {
       method: 'POST',
+      credentials: 'include',
       headers: token ? { Authorization: `Bearer ${token}` } : undefined
     }).catch(console.error);
   },
@@ -34,7 +35,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   initAuth: async () => {
     set({ isLoading: true });
     try {
-      const refreshRes = await fetch('/api/v1/auth/refresh', { method: 'POST' });
+      const refreshRes = await fetch('/api/v1/auth/refresh', { method: 'POST', credentials: 'include' });
       if (!refreshRes.ok) {
         set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
         return;

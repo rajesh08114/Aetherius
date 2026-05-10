@@ -1,16 +1,12 @@
 import { useMutation } from '@tanstack/react-query';
-import { useAuthStore } from '@/store/authStore';
+import { authFetch } from '@/lib/utils/authFetch';
 
 export function useAIOptimize() {
-  const accessToken = useAuthStore((state) => state.accessToken);
   return useMutation({
     mutationFn: async (tripId: string) => {
-      const res = await fetch('/api/v1/ai/optimize', {
+      const res = await authFetch('/api/v1/ai/optimize', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tripId })
       });
       if (!res.ok) throw new Error('Failed to optimize');
@@ -20,15 +16,11 @@ export function useAIOptimize() {
 }
 
 export function useAIHealth() {
-  const accessToken = useAuthStore((state) => state.accessToken);
   return useMutation({
     mutationFn: async (tripId: string) => {
-      const res = await fetch('/api/v1/ai/health-score', {
+      const res = await authFetch('/api/v1/ai/health-score', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tripId })
       });
       if (!res.ok) throw new Error('Failed to get health score');
@@ -38,33 +30,26 @@ export function useAIHealth() {
 }
 
 export function useAIMoodMatch() {
-  const accessToken = useAuthStore((state) => state.accessToken);
   return useMutation({
     mutationFn: async (moods: string[]) => {
-      const res = await fetch('/api/v1/ai/recommend', {
+      const res = await authFetch('/api/v1/ai/recommend', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ moods })
       });
       if (!res.ok) throw new Error('Failed to get recommendations');
-      return res.json();
+      const json = await res.json();
+      return json.data as { recommendations: any[] };
     }
   });
 }
 
 export function useAIChecklist() {
-  const accessToken = useAuthStore((state) => state.accessToken);
   return useMutation({
     mutationFn: async (tripId: string) => {
-      const res = await fetch('/api/v1/ai/checklist', {
+      const res = await authFetch('/api/v1/ai/checklist', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tripId })
       });
       if (!res.ok) throw new Error('Failed to generate checklist');

@@ -12,7 +12,7 @@ import {
   Home, 
   Map as MapIcon, 
   Search, 
-  Lightbulb, 
+  Users, 
   User, 
   Settings, 
   LogOut, 
@@ -28,7 +28,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/trips', label: 'My Trips', icon: MapIcon },
   { href: '/explore/cities', label: 'Explore', icon: Search },
-  { href: '/insights', label: 'Insights', icon: Lightbulb },
+  { href: '/community', label: 'Community', icon: Users },
   { href: '/profile', label: 'Profile', icon: User },
 ];
 
@@ -45,14 +45,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [isAuthenticated, isLoading, router]);
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0f172a] text-slate-200">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 px-6 py-4 text-sm">
+          Restoring your session...
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-screen bg-[#0f172a] text-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-[#f7f4ec] text-aetherius-heading overflow-hidden">
       
       {/* DESKTOP SIDEBAR */}
       <motion.aside 
         initial={false}
         animate={{ width: sidebarOpen ? 280 : 80 }}
-        className="hidden md:flex flex-col border-r border-slate-800 bg-slate-900/80 backdrop-blur-xl relative z-20"
+        className="hidden md:flex flex-col border-r border-black/15 bg-aetherius-nav/95 text-white backdrop-blur-xl relative z-20"
       >
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center space-x-3 overflow-hidden">
@@ -70,7 +80,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </AnimatePresence>
           </div>
-          <button onClick={toggleSidebar} className="text-slate-500 hover:text-slate-300 transition-colors">
+          <button onClick={toggleSidebar} className="text-white/55 hover:text-white transition-colors">
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
@@ -81,9 +91,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             return (
               <Link key={item.href} href={item.href}>
                 <div className={`flex items-center px-3 py-3 my-1 rounded-lg transition-all group ${
-                  isActive ? 'bg-amber-500/10 text-amber-500 border-l-4 border-amber-500' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border-l-4 border-transparent'
+                  isActive ? 'bg-amber-500/15 text-amber-400 border-l-4 border-amber-500' : 'text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent'
                 }`}>
-                  <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-amber-500' : 'text-slate-400 group-hover:text-slate-200'}`} />
+                  <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-amber-400' : 'text-white/70 group-hover:text-white'}`} />
                   <AnimatePresence>
                     {sidebarOpen && (
                       <motion.span 
@@ -104,9 +114,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {isAdmin && (
             <Link href="/admin">
               <div className={`flex items-center px-3 py-3 my-1 rounded-lg transition-all group ${
-                pathname.startsWith('/admin') ? 'bg-amber-500/10 text-amber-500 border-l-4 border-amber-500' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border-l-4 border-transparent'
+                pathname.startsWith('/admin') ? 'bg-amber-500/15 text-amber-400 border-l-4 border-amber-500' : 'text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent'
               }`}>
-                <Settings className={`w-5 h-5 flex-shrink-0 ${pathname.startsWith('/admin') ? 'text-amber-500' : 'text-slate-400 group-hover:text-slate-200'}`} />
+                <Settings className={`w-5 h-5 flex-shrink-0 ${pathname.startsWith('/admin') ? 'text-amber-400' : 'text-white/70 group-hover:text-white'}`} />
                 <AnimatePresence>
                   {sidebarOpen && (
                     <motion.span 
@@ -124,13 +134,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-white/10">
           <div className="flex items-center">
-            <div className="relative w-10 h-10 rounded-full bg-slate-700 flex-shrink-0 overflow-hidden flex items-center justify-center border border-slate-600">
+            <div className="relative w-10 h-10 rounded-full bg-white/10 flex-shrink-0 overflow-hidden flex items-center justify-center border border-white/20">
               {user?.avatar ? (
                 <Image src={user.avatar} alt="Avatar" fill className="object-cover" />
               ) : (
-                <User className="w-5 h-5 text-slate-400" />
+                <User className="w-5 h-5 text-white/70" />
               )}
             </div>
             <AnimatePresence>
@@ -142,7 +152,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className="ml-3 flex-1 overflow-hidden"
                 >
                   <p className="text-sm font-medium truncate">{user?.name || 'Traveler'}</p>
-                  <button onClick={logout} className="text-xs text-slate-500 hover:text-amber-500 flex items-center mt-1">
+                  <button onClick={logout} className="text-xs text-white/60 hover:text-amber-300 flex items-center mt-1">
                     <LogOut className="w-3 h-3 mr-1" /> Logout
                   </button>
                 </motion.div>
@@ -153,9 +163,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </motion.aside>
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#0f172a] relative z-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#f7f4ec] relative z-0">
         {/* TOP NAVBAR */}
-        <header className="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md flex items-center justify-between px-6 z-10 sticky top-0">
+        <header className="h-16 border-b border-aetherius-line bg-white/90 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-10 sticky top-0">
           <div className="md:hidden flex items-center space-x-2">
             <Plane className="w-6 h-6 text-amber-500" />
             <span className="font-syne font-bold">Traveloop</span>
@@ -163,17 +173,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           
           <div className="hidden md:flex flex-1 max-w-md relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-slate-500" />
+              <Search className="h-4 w-4 text-aetherius-muted" />
             </div>
             <input 
               type="text" 
               placeholder="Search destinations, trips..." 
-              className="w-full bg-slate-800 border border-slate-700 rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+              className="w-full bg-aetherius-field border border-aetherius-line rounded-full py-2 pl-10 pr-4 text-sm text-aetherius-heading placeholder-aetherius-muted focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-colors"
             />
           </div>
 
           <div className="flex items-center space-x-4">
-            <button className="relative p-2 text-slate-400 hover:text-slate-200 transition-colors">
+            <button className="relative p-2 text-aetherius-muted hover:text-aetherius-heading transition-colors">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full"></span>
             </button>
@@ -181,18 +191,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* PAGE CONTENT */}
-        <main className="flex-1 overflow-auto p-4 md:p-8">
+        <main className="flex-1 overflow-auto p-4 pb-20 md:p-8 md:pb-8">
           {children}
         </main>
       </div>
 
       {/* MOBILE BOTTOM TAB BAR */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-slate-800 bg-slate-900/90 backdrop-blur-xl pb-safe z-50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-aetherius-line bg-white/95 backdrop-blur-xl pb-safe z-50">
         <div className="flex justify-around items-center h-16 px-2">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
-              <Link key={item.href} href={item.href} className="relative flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-slate-200">
+              <Link key={item.href} href={item.href} className="relative flex flex-col items-center justify-center w-full h-full text-aetherius-muted hover:text-aetherius-heading">
                 {isActive && (
                   <motion.div layoutId="mobileTab" className="absolute -top-px w-8 h-1 bg-amber-500 rounded-b-full" />
                 )}

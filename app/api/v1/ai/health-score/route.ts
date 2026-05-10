@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth/middleware';
 import { checkRateLimit } from '@/lib/db/redis';
 import { ITINERARY_HEALTH_PROMPT, CONFLICT_DETECTOR_PROMPT } from '@/lib/ai/prompts';
 import { aiClient } from '@/lib/ai/client';
+import { extractJsonObject } from '@/lib/ai/json';
 import connectToDatabase from '@/lib/db/mongoose';
 import Trip from '@/lib/models/Trip';
 import Stop from '@/lib/models/Stop';
@@ -40,19 +41,21 @@ export async function POST(req: Request) {
 
     const msgHealth = await aiClient.messages.create({
       max_tokens: 1024,
+      stream: false,
       system: ITINERARY_HEALTH_PROMPT,
       messages: [{ role: 'user', content: `Itinerary: ${itinerary}` }]
     });
 
     const msgConflict = await aiClient.messages.create({
       max_tokens: 1024,
+      stream: false,
       system: CONFLICT_DETECTOR_PROMPT,
       messages: [{ role: 'user', content: `Itinerary: ${itinerary}` }]
     });
 
     const getJson = (msg: any) => {
       const txt = msg.content[0].type === 'text' ? msg.content[0].text : '{}';
-      return JSON.parse(txt.substring(txt.indexOf('{'), txt.lastIndexOf('}') + 1) || '{}');
+      return extractJsonObject(txt);
     };
 
     const health = getJson(msgHealth);
