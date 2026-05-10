@@ -8,6 +8,9 @@ type ChatMessage = {
 type ChatRequest<TStream extends boolean | undefined = boolean | undefined> = {
   model?: string;
   max_tokens?: number;
+  temperature?: number;
+  top_p?: number;
+  frequency_penalty?: number;
   system?: string;
   messages: ChatMessage[];
   stream?: TStream;
@@ -67,6 +70,9 @@ const createChatCompletionForModel = async (request: ChatRequest, model: string)
     body: JSON.stringify({
       model,
       max_tokens: request.max_tokens,
+      temperature: request.temperature,
+      top_p: request.top_p,
+      frequency_penalty: request.frequency_penalty,
       messages: buildMessages(request.system, request.messages),
       stream: false
     })
@@ -108,6 +114,9 @@ const streamChatCompletionForModel = async function* (request: ChatRequest<true>
     body: JSON.stringify({
       model,
       max_tokens: request.max_tokens,
+      temperature: request.temperature,
+      top_p: request.top_p,
+      frequency_penalty: request.frequency_penalty,
       messages: buildMessages(request.system, request.messages),
       stream: true
     })

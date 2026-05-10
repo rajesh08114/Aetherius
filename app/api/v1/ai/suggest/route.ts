@@ -10,12 +10,36 @@ function ssePayload(text: string) {
   return encoder.encode(`data: ${JSON.stringify({ text })}\n\n`);
 }
 
+function sanitizeAiText(raw: string) {
+  let text = raw
+    .replace(/\r\n/g, '\n')
+    .replace(/\u0000/g, '')
+    .replace(/^\s*[:;]\s*$/gm, '')
+    .replace(/[^\S\r\n]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  // Collapse repeated adjacent words like "help help" or "trip trip".
+  for (let i = 0; i < 3; i += 1) {
+    const next = text.replace(/\b([A-Za-z][A-Za-z'-]*)\b(\s+)\1\b/gi, '$1');
+    if (next === text) break;
+    text = next;
+  }
+
+  text = text
+    .replace(/([!?.,])\1{1,}/g, '$1')
+    .replace(/[^\S\r\n]{2,}/g, ' ')
+    .trim();
+
+  return text;
+}
+
 function buildFallbackStream(text: string) {
   return new ReadableStream({
     async start(controller) {
-      const words = text.split(' ');
-      for (const word of words) {
-        controller.enqueue(ssePayload(`${word} `));
+      const tokens = text.match(/\S+\s*/g) || [text];
+      for (const token of tokens) {
+        controller.enqueue(ssePayload(token));
         await new Promise((r) => setTimeout(r, 40));
       }
       controller.close();
@@ -44,44 +68,34 @@ export async function POST(req: Request) {
       return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
     }
 
-    let stream: AsyncGenerator<any>;
+    let cleanedResponse = '';
     try {
-      stream = await aiClient.messages.create({
-        max_tokens: 1024,
+      const msg = await aiClient.messages.create({
+        max_tokens: 900,
+        temperature: 0.35,
+        top_p: 0.9,
+        frequency_penalty: 0.6,
         system: TRIP_PLANNER_PROMPT,
         messages: [{ role: 'user', content: `${contextString}\nUser: ${prompt}` }],
-        stream: true,
+        stream: false
       });
-    } catch {
-      const fallback = buildFallbackStream('AI service is temporarily unavailable. Please retry in a moment.');
+
+      const responseText = msg.content[0]?.type === 'text' ? msg.content[0].text : '';
+      cleanedResponse = sanitizeAiText(responseText);
+    } catch (error: any) {
+      const message = String(error?.message || '');
+      const fallbackText = message.includes('model_not_supported')
+        ? 'Configured AI model is not available on your provider. Update HF_MODEL_ID in .env to a supported model.'
+        : 'AI service is temporarily unavailable. Please retry in a moment.';
+      const fallback = buildFallbackStream(fallbackText);
       return new Response(fallback, { headers: { 'Content-Type': 'text/event-stream' } });
     }
 
-    const readableStream = new ReadableStream({
-      async start(controller) {
-        try {
-          let emittedAnyChunk = false;
-          for await (const chunk of stream) {
-            if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-              emittedAnyChunk = true;
-              controller.enqueue(ssePayload(chunk.delta.text));
-            }
-          }
+    if (!cleanedResponse) {
+      cleanedResponse = 'I could not generate a response right now. Please try again.';
+    }
 
-          if (!emittedAnyChunk) {
-            controller.enqueue(ssePayload('AI response is currently unavailable. Please try again.'));
-          }
-        } catch (error: any) {
-          const message = String(error?.message || '');
-          const fallbackText = message.includes('model_not_supported')
-            ? 'Configured AI model is not available on your provider. Update HF_MODEL_ID in .env to a supported model.'
-            : 'AI service is temporarily unavailable. Please retry in a moment.';
-          controller.enqueue(ssePayload(fallbackText));
-        } finally {
-          controller.close();
-        }
-      }
-    });
+    const readableStream = buildFallbackStream(cleanedResponse);
 
     return new Response(readableStream, {
       headers: {

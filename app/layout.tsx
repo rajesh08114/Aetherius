@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Josefin_Sans, Syne, DM_Sans } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { Providers } from './providers';
-import './tailwind.generated.css';
+import './tailwind.css';
 import './globals.css';
 
 const josefin = Josefin_Sans({

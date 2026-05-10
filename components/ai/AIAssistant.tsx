@@ -15,6 +15,37 @@ const QUICK_PROMPTS = [
   'Best local food spots?'
 ];
 
+function mergeStreamText(existing: string, incoming: string) {
+  if (!incoming) return existing;
+  if (!existing) return incoming;
+  if (existing.endsWith(incoming)) return existing;
+  if (incoming.startsWith(existing)) return incoming;
+
+  const maxOverlap = Math.min(existing.length, incoming.length);
+  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
+    if (existing.slice(-overlap) === incoming.slice(0, overlap)) {
+      return existing + incoming.slice(overlap);
+    }
+  }
+  return existing + incoming;
+}
+
+function cleanupAssistantText(raw: string) {
+  let text = raw
+    .replace(/\r\n/g, '\n')
+    .replace(/[^\S\r\n]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  for (let i = 0; i < 3; i += 1) {
+    const next = text.replace(/\b([A-Za-z][A-Za-z'-]*)\b(\s+)\1\b/gi, '$1');
+    if (next === text) break;
+    text = next;
+  }
+
+  return text.replace(/[^\S\r\n]{2,}/g, ' ').trim();
+}
+
 export function AIAssistant() {
   const { aiPanelOpen, setAIPanelOpen } = useUIStore();
   const { activeTrip } = useTripStore();
@@ -25,13 +56,36 @@ export function AIAssistant() {
   ]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState<'normal' | 'maximized' | 'minimized'>('normal');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const defaultMessage = { role: 'assistant', content: "Hi! I'm Traveloop AI. How can I help you plan your trip today?" };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isStreaming]);
+
+  useEffect(() => {
+    if (aiPanelOpen) setViewMode('normal');
+  }, [aiPanelOpen]);
+
+  const handleClose = () => {
+    setAIPanelOpen(false);
+    setViewMode('normal');
+  };
+
+  const handleMinimize = () => {
+    setViewMode('minimized');
+  };
+
+  const handleToggleMaximize = () => {
+    setViewMode((prev) => (prev === 'maximized' ? 'normal' : 'maximized'));
+  };
+
+  const panelSizeClass =
+    viewMode === 'maximized'
+      ? 'top-4 bottom-4 left-4 right-4 md:top-8 md:bottom-8 md:right-8 md:left-auto md:w-[680px]'
+      : 'bottom-20 left-4 right-4 h-[72vh] md:bottom-8 md:left-auto md:right-8 md:w-[420px] md:h-[520px]';
 
   const sendPrompt = async (userMessage: string) => {
     if (!userMessage.trim() || isStreaming) return;
@@ -93,7 +147,8 @@ export function AIAssistant() {
                 if (typeof data.text === 'string' && data.text.length > 0) {
                   setMessages((prev) => {
                     const next = [...prev];
-                    next[next.length - 1].content += data.text;
+                    const current = next[next.length - 1].content || '';
+                    next[next.length - 1].content = mergeStreamText(current, data.text);
                     return next;
                   });
                 }
@@ -106,6 +161,15 @@ export function AIAssistant() {
           }
         }
       }
+
+      setMessages((prev) => {
+        const next = [...prev];
+        const lastIndex = next.length - 1;
+        if (lastIndex >= 0 && next[lastIndex].role === 'assistant') {
+          next[lastIndex].content = cleanupAssistantText(next[lastIndex].content);
+        }
+        return next;
+      });
     } catch (error: any) {
       const message = error?.message || "Sorry, I'm having trouble connecting right now.";
       setMessages((prev) => [...prev, { role: 'assistant', content: message }]);
@@ -126,17 +190,41 @@ export function AIAssistant() {
   return (
     <AnimatePresence>
       <motion.div className="fixed inset-0 z-50 pointer-events-none" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-        <div className="absolute inset-0 bg-black/15 backdrop-blur-[1px] md:hidden" onClick={() => setAIPanelOpen(false)} />
+        <div className="absolute inset-0 bg-black/15 backdrop-blur-[1px] md:hidden" onClick={handleClose} />
 
+        {viewMode === 'minimized' ? (
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            className="pointer-events-auto absolute bottom-20 left-4 right-4 md:bottom-8 md:left-auto md:right-8 md:w-[320px] rounded-full border border-slate-700 bg-slate-900 px-4 py-2 shadow-2xl"
+          >
+            <div className="flex items-center justify-between text-slate-200">
+              <button
+                type="button"
+                onClick={() => setViewMode('normal')}
+                className="flex items-center gap-2 text-sm font-medium hover:text-white transition-colors"
+                title="Restore"
+              >
+                <Sparkles className="h-4 w-4 text-amber-400" />
+                <span>Traveloop AI</span>
+              </button>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={handleToggleMaximize} className="text-slate-300 hover:text-white transition-colors" title="Maximize">
+                  <Maximize2 className="h-4 w-4" />
+                </button>
+                <button type="button" onClick={handleClose} className="text-slate-300 hover:text-white transition-colors" title="Close">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
         <motion.div
           initial={{ opacity: 0, y: 30, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 30, scale: 0.96 }}
-          className={`pointer-events-auto absolute bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
-            expanded
-              ? 'top-4 bottom-4 left-4 right-4 md:top-8 md:bottom-8 md:right-8 md:left-auto md:w-[680px]'
-              : 'bottom-20 left-4 right-4 h-[72vh] md:bottom-8 md:left-auto md:right-8 md:w-[420px] md:h-[520px]'
-          }`}
+          className={`pointer-events-auto absolute bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${panelSizeClass}`}
         >
           <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4 flex items-center justify-between">
             <div className="flex items-center text-white">
@@ -146,19 +234,22 @@ export function AIAssistant() {
                 <p className="text-xs text-white/80">Trip ideas, budgeting, and planning help</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setMessages([{ role: 'assistant', content: "Hi! I'm Traveloop AI. How can I help you plan your trip today?" }])}
+                onClick={() => setMessages([defaultMessage])}
                 className="text-white/80 hover:text-white transition-colors"
                 title="New chat"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
-              <button type="button" onClick={() => setExpanded(!expanded)} className="text-white/80 hover:text-white transition-colors" title="Resize">
-                {expanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              <button type="button" onClick={handleMinimize} className="text-white/80 hover:text-white transition-colors" title="Minimize">
+                <Minimize2 className="w-4 h-4" />
               </button>
-              <button type="button" onClick={() => setAIPanelOpen(false)} className="text-white/80 hover:text-white transition-colors" title="Close">
+              <button type="button" onClick={handleToggleMaximize} className="text-white/80 hover:text-white transition-colors" title="Maximize">
+                {viewMode === 'maximized' ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+              <button type="button" onClick={handleClose} className="text-white/80 hover:text-white transition-colors" title="Close">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -228,6 +319,7 @@ export function AIAssistant() {
             </div>
           </form>
         </motion.div>
+        )}
       </motion.div>
     </AnimatePresence>
   );
