@@ -1,4 +1,4 @@
-# Traveloop
+﻿# Traveloop
 
 Traveloop is an AI-powered travel planning platform built with Next.js.  
 It helps users design trips end-to-end: itinerary building, city/activity planning, budgeting, checklists, notes, sharing, and community discovery.
@@ -67,6 +67,41 @@ npm run dev
 5. Open:
 
 `http://localhost:3000`
+
+## Deploy on Vercel
+
+1. Push this repository to GitHub/GitLab/Bitbucket.
+2. In Vercel, click **Add New Project** and import the repository.
+3. Framework preset: **Next.js** (auto-detected).
+4. Build command: `npm run build` (configured in `vercel.json`).
+5. Add environment variables in **Project Settings -> Environment Variables**.
+6. Deploy.
+
+Required Vercel environment variables:
+
+- `MONGODB_URI`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `NEXT_PUBLIC_APP_URL` (set to your deployed domain, for example `https://your-app.vercel.app`)
+- `HF_API_KEY` (required for AI features)
+- `HF_MODEL_ID` (required for AI features)
+
+Recommended optional variables:
+
+- `HF_INFERENCE_URL` (default: `https://router.huggingface.co/v1`)
+- `HF_MODEL_FALLBACKS`
+- `REDIS_URL`
+- `REDIS_TOKEN`
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- `NEXT_PUBLIC_SOCKET_URL`
+
+Notes:
+
+- `vercel.json` is included for explicit build configuration.
+- `.vercelignore` is included to reduce deployment upload size.
+- After first deploy, confirm `NEXT_PUBLIC_APP_URL` matches the final Vercel production domain and redeploy.
 
 ## Environment Variables
 
@@ -137,4 +172,4 @@ Recent improvements were added to reduce noisy AI output:
 
 ## License
 
-Private project. Add your organization’s license policy before public distribution.
+Private project. Add your organization's license policy before public distribution.

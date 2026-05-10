@@ -1,0 +1,16 @@
+node_modules
+.next
+dist
+build
+coverage
+.git
+.github
+*.log
+*.err.log
+next-dev*.log
+next-dev*.err.log
+*.tsbuildinfo
+extract.py
+ARCHITECTURE_V2 (1).md
+RULES_V2.md
+POSTGRES_MIGRATION.md

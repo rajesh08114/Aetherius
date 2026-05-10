@@ -38,6 +38,7 @@ export function middleware(request: NextRequest) {
   }
   
   const isProtectedPath = 
+    path.startsWith('/dashboard') || 
     path.startsWith('/trips') || 
     path.startsWith('/explore') || 
     path.startsWith('/profile') || 
