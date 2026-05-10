@@ -33,6 +33,15 @@ export default function AdminDashboardPage() {
   const { data, isLoading, isError, error, refetch, isRefetching } = useAdminAnalytics();
   const updateRoleMutation = useUpdateUserRole();
 
+  const overview = data?.overview;
+
+  const statusChartData = useMemo(() => {
+    return (data?.tripStatusDistribution ?? []).map((item) => ({
+      ...item,
+      label: item.status[0].toUpperCase() + item.status.slice(1)
+    }));
+  }, [data?.tripStatusDistribution]);
+
   if (user && user.role !== 'admin') {
     return (
       <PageTransition>
@@ -53,15 +62,6 @@ export default function AdminDashboardPage() {
       </PageTransition>
     );
   }
-
-  const overview = data?.overview;
-
-  const statusChartData = useMemo(() => {
-    return (data?.tripStatusDistribution ?? []).map((item) => ({
-      ...item,
-      label: item.status[0].toUpperCase() + item.status.slice(1)
-    }));
-  }, [data?.tripStatusDistribution]);
 
   return (
     <PageTransition>
