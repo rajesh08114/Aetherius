@@ -80,7 +80,7 @@ export default async function PublicTripSharePage({ params }: { params: { token:
         </div>
 
         <div className="space-y-8 relative before:absolute before:inset-0 before:ml-6 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-amber-500 before:to-slate-800">
-          {stops.map((stop: { arrivalDate: string | number | Date; departureDate: string | number | Date; id: Key | null | undefined; cityName: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined; country: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined; notes: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined; }, idx: number) => {
+          {stops.map((stop: any, idx: number) => {
             const arrivalDate = stop.arrivalDate ? new Date(stop.arrivalDate) : null;
             const departureDate = stop.departureDate ? new Date(stop.departureDate) : null;
             const nights = arrivalDate && departureDate
